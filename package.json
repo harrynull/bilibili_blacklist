@@ -1,0 +1,30 @@
+{
+  "name": "bilibili_blacklist",
+  "version": "1.0.0",
+  "description": "A website that allows users to share and manage their bilibili danmaku blacklist.",
+  "main": "index.js",
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "express": "^4.15.3",
+    "vue": "^2.3.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abc612008/bilibili_blacklist.git"
+  },
+  "keywords": [
+    "bilibili",
+    "blacklist",
+    "website"
+  ],
+  "author": "Null Harry",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/abc612008/bilibili_blacklist/issues"
+  },
+  "homepage": "https://github.com/abc612008/bilibili_blacklist#readme"
+}
