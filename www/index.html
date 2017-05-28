@@ -1,12 +1,68 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+
 <style>
 .long-textbox{
   width: 300px;
 }
+.login{
+  background-color:#EEE;
+}
 </style>
-Login with Cookies:
-<form action="/login/cookies" method="post">
-  DedeUserID: <input type="text" name="DedeUserID" class="long-textbox"/><br>
-  DedeUserID__ckMd5: <input type="text" name="DedeUserID__ckMd5" class="long-textbox"/><br>
-  SESSDATA: <input type="text" name="SESSDATA" class="long-textbox"/><br>
-  <input type="submit" value="Login" />
+
+<script src="js/vue.js"></script>
+<script src="js/vue-resource.min.js"></script>
+
+</head>
+<body>
+
+<template v-if="not_login">
+    <div class="login">
+        Login with Cookies:
+        <form action="/login/cookies" method="post">
+          DedeUserID: <input type="text" name="DedeUserID" class="long-textbox"/><br>
+          DedeUserID__ckMd5: <input type="text" name="DedeUserID__ckMd5" class="long-textbox"/><br>
+          SESSDATA: <input type="text" name="SESSDATA" class="long-textbox"/><br>
+          <input type="submit" value="Login" />
+        </form>
+    </div>
+</template>
+Your blacklist:
+<div id="blacklist">
+  <ol>
+    <blacklist-item v-for="item in blacklist" :key="item.id" v-bind:item="item"></blacklist-item>
+  </ol>
+</div>
+<form action="/add_item" method="post">
+    type: <input type="text" name="type"/><br>
+    filter: <input type="text" name="filter" class="long-textbox"/><br>
+    <input type="submit" value="Add" />
 </form>
+<form action="/del_item" method="post">
+    id: <input type="text" name="ids"/><br>
+    <input type="submit" value="Del" />
+</form>
+<script>
+Vue.component('blacklist-item', {
+  props: ['item'],
+  template: '<li>{{ ["Normal","Regex","User"][item.type] }} {{ item.filter }} {{item.id}}</li>'
+})
+
+var app = new Vue({
+  el: '#blacklist',
+  data: {
+    blacklist: [],
+    not_login: document.cookie.indexOf('bilibili_cookies=')==-1
+  },
+  mounted: function() {
+      this.$http.get('/fetch_blacklist').then(response => {
+        this.blacklist = response.body;
+      }, response => {
+        console.log("unknown error")
+      });
+  }
+})
+</script>
+</body>
+</html>
