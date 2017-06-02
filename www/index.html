@@ -17,17 +17,16 @@
 </head>
 <body>
 
-<template v-if="not_login">
     <div class="login">
         Login with Cookies:
         <form action="/login/cookies" method="post">
-          DedeUserID: <input type="text" name="DedeUserID" class="long-textbox"/><br>
-          DedeUserID__ckMd5: <input type="text" name="DedeUserID__ckMd5" class="long-textbox"/><br>
-          SESSDATA: <input type="text" name="SESSDATA" class="long-textbox"/><br>
+          DedeUserID: <input type="password" name="DedeUserID" class="long-textbox"/><br>
+          DedeUserID__ckMd5: <input type="password" name="DedeUserID__ckMd5" class="long-textbox"/><br>
+          SESSDATA: <input type="password" name="SESSDATA" class="long-textbox"/><br>
           <input type="submit" value="Login" />
         </form>
     </div>
-</template>
+
 Your blacklist:
 <div id="blacklist">
   <ol>

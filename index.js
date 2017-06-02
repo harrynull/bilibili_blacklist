@@ -1,8 +1,10 @@
 var request = require('request');
 var express = require('express');
 var app = express();
-var cookieParser = require('cookie-parser')
+var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
+var database = require('./utils/database.js');
+var bilibili = require('./utils/bilibili.js');
 
 app.use('/', express.static(__dirname + '/www'));
 app.use('/js', express.static(__dirname + '/node_modules/bootstrap/dist/js'));
@@ -17,20 +19,18 @@ app.post('/login/cookies', function (req, res) {
     res.cookie("bilibili_cookies", "DedeUserID="+req.body["DedeUserID"]+"; DedeUserID__ckMd5="+req.body["DedeUserID__ckMd5"]+"; SESSDATA="+req.body["SESSDATA"]);
     res.redirect("/");
 })
-
 app.get('/fetch_blacklist', function (req, res) {
-    request(
-        {
-            url: 'https://api.bilibili.com/x/dm/filter/user?jsonp=jsonp',
-            headers: {'Cookie': req.cookies.bilibili_cookies}
-        }, function (error, response, body) {
-            if (!error && response.statusCode == 200)
-                res.json(JSON.parse(body)["data"]["rule"]);
-            else
-                res.send("unknown error");
+    bilibili.fetch_blacklist(req.cookies.bilibili_cookies,
+        function(suc, res) {
+            if(!suc)
+            {
+                console.log(res);
+                res.send(res);
+            }
+            else res.json(res);
         }
     );
-})
+});
 
 app.post('/add_item', function (req, res) {
     request.post(
@@ -63,4 +63,5 @@ app.post('/del_item', function (req, res) {
         }
     );
 })
+
 var server = app.listen(8000)
