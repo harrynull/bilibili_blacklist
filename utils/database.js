@@ -5,21 +5,32 @@ exports.insert=function(db, table, data, callback) {
     collection.insert(data, function(err, result) {
         if(err)
         {
-            console.log('Error: '+ err);
+            console.log('[Error][DB] Insert: '+ err);
             return;
         }
-        callback(result);
+        if(callback) callback(result);
     });
 };
-exports.select=function(db, table, where, callback) {
-    var collection = this.db.collection(table);
+exports.find=function(db, table, where, callback) {
+    var collection = db.collection(table);
     collection.find(where).toArray(function(err, result) {
         if(err)
         {
-            console.log('Error:'+ err);
+            console.log('[Error][DB] Find: '+ err);
             return;
         }
-        callback(result);
+        if(callback) callback(result);
+    });
+};
+exports.update=function(db, table, where, value, callback) {
+    var collection = db.collection(table);
+    collection.update(where, value, function(err, result) {
+        if(err)
+        {
+            console.log('[Error][DB] Update: '+ err);
+            return;
+        }
+        if(callback) callback(result);
     });
 };
 
