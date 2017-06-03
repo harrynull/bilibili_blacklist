@@ -67,7 +67,8 @@ app.get('/apply/:id', function (req, response) {
                 bilibili.add_filter(req.cookies.bilibili_cookies, res[0]["filters"][id].type, res[0]["filters"][id].filter, null);
             }
             database.update(db, "sharelist", query, {$inc: {"usage": 1}}, function(){db.close()});
-            response.json({"code":0, "message":"success"});
+            //response.json({"code":0, "message":"success"});
+            response.redirect("/");
         });
     });
 });
@@ -76,11 +77,12 @@ app.get('/upvote/:id', function (req, response) {
     database.connect(function(db){
         database.find(db, "sharelist", query, function(res){
             database.update(db, "sharelist", query, {$inc: {"vote": 1}}, function(){db.close()});
-            response.json({"code":0, "message":"success"});
+            //response.json({"code":0, "message":"success"});
+            response.redirect("/");
         });
     });
 });
-app.post('/add_sharelist', function (req, response) {
+app.post('/submit', function (req, response) {
     database.connect(function(db){
         var closeDB=function(){db.close();};
         database.find(db, "users", {"uid": parseInt(req.cookies.uid), "token": req.cookies.token},function(res){
@@ -89,24 +91,19 @@ app.post('/add_sharelist', function (req, response) {
                 closeDB();
                 return;
             }
-            var filters=[];
-            var raw_filter_items=req.body["filters"].split("\r\n");
-            for(var id in raw_filter_items){
-                var eles=raw_filter_items[id].split(" ");
-                filters.push({"type":eles[0],"filter":eles[1]});
-            }
             database.insert(db, "sharelist",
                 {
                     "uid": req.cookies.uid,
                     "name": req.body["name"],
                     "description": req.body["description"],
-                    "filters": filters,
+                    "filters": JSON.parse(req.body["filters"]),
                     "time": new Date().getTime(),
                     "vote": 0,
                     "usage": 0
                 }
                 , function(){
-                    response.json({"code":0, "message":"success"});
+                    //response.json({"code":0, "message":"success"});
+                    response.redirect("/");
                     closeDB();
                 }
             );

@@ -51,13 +51,20 @@
       <div class="row">
         <div class="col-md-6">
             <h2>分享列表</h2>
-            <div id="sharelist">
-                <ol>
-                    <share-item v-for="item in sharelist" :key="item._id" v-bind:item="item"></share-item>
-                </ol>
-            </div>
-            
-            <a href="add.html" class="btn btn-success">分享屏蔽词包</a>
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>名称</th><th>票数</th><th>使用量</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in sharelist">
+                        <th>{{item.name}}</th><th>{{item.vote}}</th><th>{{item.usage}}</th>
+                        <th><a :href="'view/'+item._id">查看</a>
+                        <a :href="'upvote/'+item._id">赞</a>
+                        <a :href="'apply/'+item._id">应用</a></th>
+                    </tr>
+                </tbody>
+            </table>
+            <a href="submit.html" class="btn btn-success">分享屏蔽词包</a>
         </div>
         
         <div class="col-md-6">
@@ -67,14 +74,28 @@
                     <tr><th>类型</th><th>屏蔽内容</th><th>操作</th></tr>
                 </thead>
                 <tbody>
-                    <blacklist-item v-for="item in blacklist" :key="item.id" v-bind:item="item" v-on:refresh="refreshBlacklist"></blacklist-item>
+                    <tr v-for="filter in blacklist">
+                        <th>{{["普通","正则","用户"][filter.type]}}</th><th>{{filter.filter}}</th><th><a href="javascript:void(0)" v-on:click="removeItem(item.id)">删除</a></th>
+                    </tr>
                 </tbody>
             </table>
 
             <form action="/add_item" method="post">
-                type: <input type="text" name="type"/><br>
-                filter: <input type="text" name="filter" class="long-textbox"/><br>
-                <input type="submit" value="Add" />
+                <div class="row">
+                    <div class="col-md-4">
+                        <select class="form-control" name="select-type" id="select-type">
+                          <option value="0">普通</option>
+                          <option value="1">正则</option>
+                          <option value="2">用户</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" placeholder="屏蔽内容" class="form-control" name="content" id="content">
+                    </div>
+                    <div class="col-md-2">
+                        <a v-on:click="add_filter" class="btn btn-success">添加</a>
+                    </div>
+                </div>
             </form>
 
        </div>
@@ -83,7 +104,7 @@
       <hr>
 
       <footer>
-        <p>&copy; 2017 Harry Yu.</p>
+        <p>&copy; 2017 <a href="https://harrynull.tech">Harry Yu</a>. Licensed under MIT. <a href="https://github.com/abc612008/bilibili_blacklist">Contribute to it</a>.</p>
       </footer>
     </div> <!-- /container -->
 

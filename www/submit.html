@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bilibili 屏蔽词分享平台 | 提交屏蔽词</title>
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <style>
+    body {
+        margin:5% 0;
+        padding:0 25%;
+        overflow-x:hidden;
+    }
+    label{
+        padding-bottom:10px;
+    }
+    textarea{
+        width:500px;
+        height:200px;
+    }
+    .sumbit_form{
+        width:50%;
+    }
+    </style>
+    <script src="js/vue.js"></script>
+
+</head>
+<body>
+    <div class="container">
+      <form class="sumbit_form form-horizontal" action="/submit" method="post">
+            <h1>提交屏蔽词包</h1>
+            
+            <div class="form-group">
+                <label class="control-label">名称</label>
+                <input type="text" placeholder="给您提交的屏蔽词包起个名字" class="input-xlarge form-control" name="name" required>
+            </div>
+
+            <div class="form-group">
+                <label class="control-label">介绍</label>
+                <textarea class="form-control" name="description"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="control-label">屏蔽词</label>
+                <table class="table table-striped">
+                  <tr>
+                    <th style="width: 5em">类型</th>
+                    <th>内容</th>
+                  </tr>
+                  <input v-model="str_filters" name="filters" hidden>
+                  <tr v-for="filter in filters">
+                    <td>{{["普通","正则","用户"][filter.type]}}</td>
+                    <td>{{filter.filter}}</td>
+                  </tr>
+                </table>
+                <div class="row">
+                    <div class="col-md-4">
+                        <select class="form-control" name="select-type" id="select-type">
+                          <option value="0">普通</option>
+                          <option value="1">正则</option>
+                          <option value="2">用户</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" placeholder="屏蔽内容" class="form-control" name="content" id="content">
+                    </div>
+                    <div class="col-md-2">
+                        <a v-on:click="add_filter" class="btn btn-success">添加</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <button class="btn btn-success">提交</button>
+            </div>
+      </form>
+
+    </div> <!-- /container -->
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script>
+    var app = new Vue({
+      el: '.sumbit_form',
+      data: {
+        filters: [],
+        str_filters: ""
+      },
+      methods:{
+        add_filter: function(){
+            this.filters.push({"type":$("#select-type").val(),"filter":$("#content").val()});
+            this.str_filters=JSON.stringify(this.filters);
+        }
+      }
+    })
+    </script>
+</body>
+</html>
