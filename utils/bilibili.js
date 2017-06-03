@@ -1,7 +1,7 @@
 var request = require('request');
 
 var jsonCall = function(url, cookie, callback, err){
-    request({ url: url, headers: {'Cookie': cookie}, forms: arguments },
+    request({ url: url, headers: {'Cookie': cookie} },
         function (error, response, body) {
             if (error || response.statusCode != 200)
             {
@@ -26,6 +26,8 @@ var jsonCallPost = function(url, cookie, arguments, callback, err){
         }
     );
 };
+
+exports.jsonCall=jsonCall;
 exports.jsonCallPost=jsonCallPost;
 
 exports.add_filter = function(cookie, type, filter, callback){

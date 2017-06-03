@@ -35,7 +35,17 @@ app.post('/login/cookies', function (req, response) {
             }
         }
     );
-})
+});
+app.get('/login/getoauth', function (req, response) {
+    login.getOAuthKey(function(res){
+        response.json(res);
+    });
+});
+app.post('/login/getinfo', function (req, response) {
+    login.getLoginInfo(req.body["oauthkey"], function(res){
+        response.json(res);
+    });
+});
 app.get('/fetch_blacklist', function (req, response) {
     bilibili.fetch_blacklist(req.cookies.bilibili_cookies,
         function(suc, res) {
