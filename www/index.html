@@ -1,113 +1,94 @@
-<!DOCTYPE HTML>
-<html>
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bilibili 屏蔽词分享平台</title>
 
-<style>
-.long-textbox{
-  width: 300px;
-}
-.login{
-  background-color:#EEE;
-}
-</style>
-
-<script src="js/vue.js"></script>
-<script src="js/vue-resource.min.js"></script>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <style>
+    body {
+      padding-top: 50px;
+      padding-bottom: 20px;
+    }
+    </style>
+    <script src="js/vue.js"></script>
+    <script src="js/vue-resource.min.js"></script>
 
 </head>
 <body>
-    <div class="login">
-        Login with Cookies:
-        <form action="/login/cookies" method="post">
-          DedeUserID: <input type="text" name="DedeUserID" class="long-textbox"/><br>
-          DedeUserID__ckMd5: <input type="password" name="DedeUserID__ckMd5" class="long-textbox"/><br>
-          SESSDATA: <input type="password" name="SESSDATA" class="long-textbox"/><br>
-          <input type="submit" value="Login" />
-        </form>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">开启</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+          <a class="navbar-brand" href="#">Bilibili 屏蔽词分享平台</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <div class="navbar-form navbar-right">
+            <a href="login.html" class="btn btn-success">登录</a>
+          </div>
+        </div><!--/.navbar-collapse -->
+      </div>
+    </nav>
+
+    <!-- Main jumbotron for a primary marketing message or call to action -->
+    <div class="jumbotron">
+      <div class="container">
+        <h1>Bilibili 屏蔽词分享平台</h1>
+        <p>这是一个可以用来分享您在Bilibili设置的弹幕屏蔽词的网站</p>
+        <p>请注意：这并不是Bilibili的官方网站，与Bilibili无关</p>
+      </div>
     </div>
-<div id="dynamic">
-  Your blacklist:
-  <div id="blacklist">
-    <ol>
-      <blacklist-item v-for="item in blacklist" :key="item.id" v-bind:item="item" v-on:refresh="refreshBlacklist"></blacklist-item>
-    </ol>
-  </div>
 
-  Sharelist:
-  <div id="sharelist">
-    <ol>
-      <share-item v-for="item in sharelist" :key="item._id" v-bind:item="item"></share-item>
-    </ol>
-  </div>
-</div>
-<form action="/add_item" method="post">
-    type: <input type="text" name="type"/><br>
-    filter: <input type="text" name="filter" class="long-textbox"/><br>
-    <input type="submit" value="Add" />
-</form>
+    <div class="container" id="main-container">
+      <!-- Example row of columns -->
+      <div class="row">
+        <div class="col-md-6">
+            <h2>分享列表</h2>
+            <div id="sharelist">
+                <ol>
+                    <share-item v-for="item in sharelist" :key="item._id" v-bind:item="item"></share-item>
+                </ol>
+            </div>
+            
+            <a href="add.html" class="btn btn-success">分享屏蔽词包</a>
+        </div>
+        
+        <div class="col-md-6">
+            <h2>您的屏蔽列表</h2>
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>类型</th><th>屏蔽内容</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                    <blacklist-item v-for="item in blacklist" :key="item.id" v-bind:item="item" v-on:refresh="refreshBlacklist"></blacklist-item>
+                </tbody>
+            </table>
 
-<form action="/del_item" method="post">
-    id: <input type="text" name="ids"/><br>
-    <input type="submit" value="Del" />
-</form>
+            <form action="/add_item" method="post">
+                type: <input type="text" name="type"/><br>
+                filter: <input type="text" name="filter" class="long-textbox"/><br>
+                <input type="submit" value="Add" />
+            </form>
 
-<form action="/add_sharelist" method="post">
-    name: <input type="text" name="name"/><br>
-    description: <br>
-    <textarea name="description" style="width:30%;height:100px"></textarea> <br>
-    filters: <br>
-    <textarea name="filters" style="width:30%;height:100px"></textarea>
-    <input type="submit" value="Add" />
-</form>
-<script>
-Vue.component('blacklist-item', {
-  props: ['item'],
-  methods: {
-      removeItem: function(id){
-          this.$http.post('/del_item', {"ids":id}).then(response => {
-              this.$emit('refresh');
-          },response => {
-              console.log("Failed");
-          });
-      }
-  },
-  template: '<li>{{ ["Normal","Regex","User"][item.type] }} {{ item.filter }} <a href="javascript:void(0)" v-on:click="removeItem(item.id)">Del</a></li>'
-});
-Vue.component('share-item', {
-  props: ['item'],
-  template: '<li>{{item.name}} {{item.vote}} {{item.usage}} <a :href="\'view/\'+item._id">View</a> <a :href="\'apply/\'+item._id">Apply</a> <a :href="\'upvote/\'+item._id">Upvote</a></li>'
-});
+       </div>
+      </div>
 
-var app = new Vue({
-  el: '#dynamic',
-  data: {
-    blacklist: [],
-    sharelist: [],
-    notLogin: document.cookie.indexOf('bilibili_cookies=')==-1,
-  },
-  methods: {
-    refreshBlacklist: function(){
-      this.$http.get('/fetch_blacklist').then(response => {
-        if(response.body.code!=undefined){
-          console.log("Failed to fetch blacklist: "+response.body.code);
-          return;
-        }
-        sessionStorage.blacklist = response.body;
-        this.blacklist = response.body;
-      }, response => {
-        console.log("Failed to fetch blacklist")
-      });
-    }
-  },
-  mounted: function() {
-      this.refreshBlacklist();
-      this.$http.get('/fetch_sharelist').then(response => {
-        this.sharelist = response.body;
-      }, response => {
-        console.log("Failed to fetch sharelist");
-      });
-  }
-});
-</script>
+      <hr>
+
+      <footer>
+        <p>&copy; 2017 Harry Yu.</p>
+      </footer>
+    </div> <!-- /container -->
+
+    <script src="js/script.js"></script>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
 </body>
 </html>

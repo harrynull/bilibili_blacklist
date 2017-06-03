@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bilibili 屏蔽词分享平台 | 提交屏蔽词</title>
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <style>
+    body {
+        text-align:center;
+        margin: 5% 0;
+    }
+    label{
+    
+        margin:15px;
+        }
+    textarea{
+        width:500px;
+        height:200px;
+    }
+    </style>
+    <script src="js/vue.js"></script>
+    <script src="js/vue-resource.min.js"></script>
+
+</head>
+<body>
+    <div class="container">
+      <form class="form-horizontal" action="/add_sharelist" method="post">
+        <fieldset>
+          <div id="legend">
+            <h1>提交屏蔽词包</h1>
+          </div>
+            <div class="control-group">
+
+              <!-- Text input-->
+              <label class="control-label">名称</label>
+              <div class="controls">
+                <input type="text" placeholder="给您提交的屏蔽词包起个名字" class="input-xlarge" name="name">
+              </div>
+            </div>
+
+            <div class="control-group">
+
+              <!-- Textarea -->
+              <label class="control-label">介绍</label>
+              <div class="controls">
+                <div class="textarea">
+                      <textarea name="description"> </textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-group">
+
+              <!-- Textarea -->
+              <label class="control-label">屏蔽词</label>
+              <div class="controls">
+                <div class="textarea">
+                      <textarea name="filters"> </textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label"></label>
+
+              <!-- Button -->
+              <div class="controls">
+                <button class="btn btn-success">提交</button>
+              </div>
+            </div>
+        </fieldset>
+      </form>
+
+    </div> <!-- /container -->
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+</body>
+</html>

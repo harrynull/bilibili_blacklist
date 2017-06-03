@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bilibili 屏蔽词分享平台 | 登录</title>
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <style>
+    body{
+        background:url(img/background.jpg) fixed center center no-repeat;
+        background-size: cover;
+    }
+    h1{
+        margin: 30px;
+        color: #FFF;
+    }
+    p{color: #FFF;}
+    .login{
+        background-color:rgba(0,0,0,0.1);
+        max-width: 360px;
+        padding: 30px;
+        margin: 0 auto;
+    }
+    body{
+        padding: 10% 0;
+    }
+    input{
+        margin: 5px 0;
+        width: 100%;
+    }
+    </style>
+    <script src="js/vue.js"></script>
+    <script src="js/vue-resource.min.js"></script>
+
+</head>
+<body>
+    <div class="container" style="text-align: center">
+        <h1>登录</h1>
+        <div class="login">
+            <p>通过Cookie登录</p>
+            <form action="/login/cookies" method="post">
+                <input type="text" name="DedeUserID" placeholder="DedeUserID" required/>
+                <input type="password" name="DedeUserID__ckMd5" placeholder="DedeUserID__ckMd5" required/>
+                <input type="password" name="SESSDATA" placeholder="SESSDATA" required/>
+                <input type="submit" value="登录" class="btn btn-primary btn-block" />
+            </form>
+        </div>
+    </div>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+</body>
+</html>

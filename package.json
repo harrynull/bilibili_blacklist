@@ -8,12 +8,15 @@
     "bootstrap": "^3.3.7",
     "cookie-parser": "^1.4.3",
     "express": "^4.15.3",
+    "jquery": "^3.2.1",
     "mongodb": "^2.2.27",
     "request": "^2.81.0",
     "vue": "^2.3.3",
     "vue-resource": "^1.3.3"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "vuetable-2": "^1.6.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
