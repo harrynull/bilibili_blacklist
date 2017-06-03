@@ -1,18 +1,18 @@
 var database = require('./database.js');
 
-// 生成Token
-// 参数：无
-// 返回：String
+// 鐢熸垚Token
+// 鍙傛暟锛氭棤
+// 杩斿洖锛歋tring
 exports.generateToken=function(){
     return ""+parseInt(Math.random()*100000000000)
 }
 
-// 储存Token
-// 参数: uid(String), token(String)
-// 返回：无
+// 鍌ㄥ瓨Token
+// 鍙傛暟: uid(String), token(String)
+// 杩斿洖锛氭棤
 exports.storeToken=function(uid, token){
     database.connect(function(db){
-        var uid = parseInt(uid);
+        uid = parseInt(uid);
         database.find(db, "users", {"uid": uid}, function(res){
             var closeDatabase=function(){db.close();};
             if(res.length==0){

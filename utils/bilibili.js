@@ -28,6 +28,18 @@ var jsonCallPost = function(url, cookie, arguments, callback, err){
 };
 exports.jsonCallPost=jsonCallPost;
 
+exports.add_filter = function(cookie, type, filter, callback){
+    jsonCallPost('https://api.bilibili.com/x/dm/filter/user/add', cookie,
+        {"type":type, "filter":filter, "jsonp":"jsonp", "csrf":""},
+        function(res){
+            if(callback) callback(true, res);
+        },
+        function(err){
+            if(callback) callback(false, err);
+        }
+    );
+}
+
 exports.fetch_blacklist = function(cookie, callback){
     jsonCall('https://api.bilibili.com/x/dm/filter/user?jsonp=jsonp', cookie,
         function(res){

@@ -1,4 +1,6 @@
-var MongoClient = require('mongodb').MongoClient;
+var mongodb = require('mongodb');
+exports.ObjectId = mongodb.ObjectId;
+var MongoClient = mongodb.MongoClient;
 var DATABASE_ADDRESS = 'mongodb://localhost:27017/bilibili_blacklist';
 exports.insert=function(db, table, data, callback) {
     var collection = db.collection(table);
