@@ -10,7 +10,7 @@
     <style>
     body {
         margin:5% 0;
-        padding:0 25%;
+        padding:0 20%;
         overflow-x:hidden;
     }
     label{
@@ -21,7 +21,17 @@
         height:200px;
     }
     .sumbit_form{
-        width:50%;
+        width:60%;
+    }
+    @media screen and (max-width:800px) {
+        body {
+            margin:5% 0;
+            padding:0 5%;
+            overflow-x:hidden;
+        }
+        .sumbit_form{
+            width:90%;
+        }
     }
     </style>
     <script src="js/vue.js"></script>
@@ -29,7 +39,7 @@
 </head>
 <body>
     <div class="container">
-      <form class="sumbit_form form-horizontal" action="/submit" method="post">
+      <form class="sumbit_form form-horizontal" action="/submit" method="post" onsubmit="return check()">
             <h1>提交屏蔽词包</h1>
             
             <div class="form-group">
@@ -49,7 +59,7 @@
                     <th style="width: 5em">类型</th>
                     <th>内容</th>
                   </tr>
-                  <input v-model="str_filters" name="filters" hidden>
+                  <input v-model="str_filters" name="filters" id="filters" hidden>
                   <tr v-for="filter in filters">
                     <td>{{["普通","正则","用户"][filter.type]}}</td>
                     <td>{{filter.filter}}</td>
@@ -73,6 +83,7 @@
             </div>
 
             <div class="form-group">
+            <p style="font-size:small">注：点击提交即代表您同意将您的屏蔽词包以 <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.zh">Creative Commons 0</a> 协议释放到公共领域。</p>
                 <button class="btn btn-success">提交</button>
             </div>
       </form>
@@ -95,6 +106,11 @@
         }
       }
     })
+    if(document.cookie.indexOf("token=")==-1) window.location.href="login.html";
+    var check=function(){
+        if($("#filters").val()==""){alert("您需要添加至少一个屏蔽词");return false;}
+        return true;
+    }
     </script>
 </body>
 </html>

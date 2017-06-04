@@ -69,16 +69,20 @@ app.get('/view/:id', function (req, response) {
         });
     });
 });
-app.get('/apply/:id', function (req, response) {
-    var query={"_id": database.ObjectId(req.params.id)};
+app.post('/apply', function (req, response) {
+    var query={"_id": database.ObjectId(req.body["id"])};
     database.connect(function(db){
         database.find(db, "sharelist", query, function(res){
+            if(res.length==0){
+                response.json({"code":-1, "message":"invalid id"});
+                db.close();
+                return;
+            }
             for(var id in res[0]["filters"]){
                 bilibili.add_filter(req.cookies.bilibili_cookies, res[0]["filters"][id].type, res[0]["filters"][id].filter, null);
             }
             database.update(db, "sharelist", query, {$inc: {"usage": 1}}, function(){db.close()});
-            //response.json({"code":0, "message":"success"});
-            response.redirect("/");
+            response.json({"code":0, "message":"success"});
         });
     });
 });
@@ -92,6 +96,25 @@ app.get('/upvote/:id', function (req, response) {
         });
     });
 });
+app.post('/comment', function (req, response) {
+    database.connect(function(db){
+        var closeDB=function(){db.close();};
+        var uid=parseInt(req.cookies.uid);
+        database.find(db, "users", {"uid": uid, "token": req.cookies.token},function(res){
+            if(res.length==0) {
+                response.json({"code":-1, "message":"User Not Login"});
+                closeDB();
+                return;
+            }
+            var query={"_id": database.ObjectId(req.body["id"])};
+            database.find(db, "sharelist", query, function(res){
+                var newComment={"uid":uid, "content":req.body["content"]};
+                database.update(db, "sharelist", query, {$push: {"comments": newComment}}, closeDB);
+                response.json({"code":0, "message":"success"});
+            });
+        });
+    });
+});
 app.post('/submit', function (req, response) {
     database.connect(function(db){
         var closeDB=function(){db.close();};
@@ -101,17 +124,20 @@ app.post('/submit', function (req, response) {
                 closeDB();
                 return;
             }
+            var jsonFilters;
+            try{jsonFilters=JSON.parse(req.body["filters"]);}
+            catch(exp){closeDB();response.json({"code":-2, "message":"Invalid Input!"});return;}
             database.insert(db, "sharelist",
                 {
                     "uid": req.cookies.uid,
                     "name": req.body["name"],
                     "description": req.body["description"],
-                    "filters": JSON.parse(req.body["filters"]),
+                    "filters": jsonFilters,
                     "time": new Date().getTime(),
                     "vote": 0,
-                    "usage": 0
-                }
-                , function(){
+                    "usage": 0,
+                    "comments": []
+                }, function(){
                     //response.json({"code":0, "message":"success"});
                     response.redirect("/");
                     closeDB();
