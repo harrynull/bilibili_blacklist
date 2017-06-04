@@ -28,7 +28,7 @@ app.post('/login/cookies', function (req, response) {
                 response.cookie("token", token);
                 response.cookie("uid", uid);
                 response.cookie("bilibili_cookies", cookie);
-                response.redirect("/");
+                response.redirect("../index.html");
                 login.storeToken(uid, token);
             }else{
                 response.json(result);
@@ -92,7 +92,7 @@ app.get('/upvote/:id', function (req, response) {
         database.find(db, "sharelist", query, function(res){
             database.update(db, "sharelist", query, {$inc: {"vote": 1}}, function(){db.close()});
             //response.json({"code":0, "message":"success"});
-            response.redirect("/");
+            response.redirect("../index.html");
         });
     });
 });
@@ -139,7 +139,7 @@ app.post('/submit', function (req, response) {
                     "comments": []
                 }, function(){
                     //response.json({"code":0, "message":"success"});
-                    response.redirect("/");
+                    response.redirect("index.html");
                     closeDB();
                 }
             );

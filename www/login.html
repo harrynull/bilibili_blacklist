@@ -74,7 +74,7 @@
         </div>
         <div class="login">
             <p>通过Cookie手动登录</p>
-            <form action="/login/cookies" method="post" id="cookie_login">
+            <form action="login/cookies" method="post" id="cookie_login">
                 <input type="text" id="uid" name="DedeUserID" placeholder="DedeUserID" required/>
                 <input type="password" id="ckmd5" name="DedeUserID__ckMd5" placeholder="DedeUserID__ckMd5" required/>
                 <input type="password" id="sessdata" name="SESSDATA" placeholder="SESSDATA" required/>
@@ -95,7 +95,7 @@
       },
       methods: {
         getOAuthKey: function(){
-          this.$http.get('/login/getoauth').then(response => {
+          this.$http.get('login/getoauth').then(response => {
             this.oauthurl = response.body.url;
             this.oauthkey = response.body.oauthKey;
           }, response => {
@@ -103,7 +103,7 @@
           });
         },
         getLoginInfo: function(){
-          this.$http.post('/login/getinfo',{"oauthkey":this.oauthkey}).then(response => {
+          this.$http.post('login/getinfo',{"oauthkey":this.oauthkey}).then(response => {
             if(response.body==-4){
                 this.status="验证失败";
                 return;
