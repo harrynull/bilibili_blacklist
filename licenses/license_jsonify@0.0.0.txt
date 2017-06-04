@@ -1,0 +1,3 @@
+(Github)substack/jsonify
+forked from (Github)douglascrockford/JSON-js
+public domain
