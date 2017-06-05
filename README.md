@@ -4,6 +4,7 @@
 
 [![Travis branch](https://img.shields.io/travis/abc612008/bilibili_blacklist/master.svg)](https://travis-ci.org/abc612008/bilibili_blacklist)
 [![dependencies](https://david-dm.org/abc612008/bilibili_blacklist.svg)](https://david-dm.org/abc612008/bilibili_blacklist)
+[![Coverage Status](https://coveralls.io/repos/github/abc612008/bilibili_blacklist/badge.svg?branch=master)](https://coveralls.io/github/abc612008/bilibili_blacklist?branch=master)
 [![license](https://img.shields.io/github/license/abc612008/bilibili_blacklist.svg)](https://github.com/abc612008/bilibili_blacklist/blob/master/LICENSE.txt)
 
 这是一个可以用来分享、管理您在Bilibili设置的弹幕屏蔽词的网站。
