@@ -35,13 +35,14 @@
     }
     </style>
     <script src="js/vue.js"></script>
+    <script src="js/vue-resource.min.js"></script>
 
 </head>
 <body>
 <div class="container">
       <form class="sumbit_form form-horizontal" action="submit" method="post" onsubmit="return check()">
             <h1>提交屏蔽词包</h1>
-            
+            <p style="color:#888">提示：请避免将不同类型的屏蔽词放入一个屏蔽词包。</p>
             <div class="form-group">
                 <label class="control-label">名称</label>
                 <input type="text" placeholder="给您提交的屏蔽词包起个名字" class="input-xlarge form-control" name="name" required>
@@ -53,6 +54,21 @@
             </div>
 
             <div class="form-group">
+                <label class="control-label">从我的屏蔽词中导入</label>
+                <table class="table table-striped">
+                  <tr>
+                    <th style="width: 5em">类型</th>
+                    <th>内容</th>
+                    <th></th>
+                  </tr>
+                  <input v-model="str_filters" name="filters" id="filters" hidden>
+                  <tr v-for="filter in my_filter">
+                    <td>{{["普通","正则","用户"][filter.type]}}</td>
+                    <td>{{filter.filter}}</td>
+                    <td><a href="javascript:void(0)" v-on:click="addToList(filter)">添加</a></td>
+                  </tr>
+                </table>
+                
                 <label class="control-label">屏蔽词</label>
                 <table class="table table-striped">
                   <tr>
@@ -77,7 +93,7 @@
                         <input type="text" placeholder="屏蔽内容" class="form-control" name="content" id="content">
                     </div>
                     <div class="col-md-2">
-                        <a v-on:click="add_filter" class="btn btn-success">添加</a>
+                        <a v-on:click="addToListFromTextbox" class="btn btn-success">添加</a>
                     </div>
                 </div>
             </div>
@@ -97,13 +113,29 @@
       el: '.sumbit_form',
       data: {
         filters: [],
+        my_filter: [],
         str_filters: ""
       },
       methods:{
-        add_filter: function(){
-            this.filters.push({"type":$("#select-type").val(),"filter":$("#content").val()});
+        addToList: function(filter){
+            this.filters.push({"type":filter.type,"filter":filter.filter});
             this.str_filters=JSON.stringify(this.filters);
+        },
+        addToListFromTextbox: function(){
+            this.addToList({"type":$("#select-type").val(),"filter":$("#content").val()});
+            $("#content").val("");
         }
+      },
+      mounted:function(){
+          this.$http.get('fetch_blacklist').then(response => {
+            if(response.body.code!=undefined){
+              console.log("Failed to fetch blacklist: "+response.body.code);
+              return;
+            }
+            this.my_filter = response.body;
+          }, response => {
+            console.log("Failed to fetch blacklist")
+          });
       }
     })
     if(document.cookie.indexOf("token=")==-1) window.location.href="login.html";
