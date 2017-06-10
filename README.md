@@ -10,7 +10,7 @@
 
 请注意：这并不是Bilibili的官方网站/项目，与Bilibili官方无关。
 
-演示站：[http://harrynull.tech/bilibili/](http://harrynull.tech/bilibili/)
+演示站：[http://harrynull.tech/bilibili/](https://harrynull.tech/bilibili/)
 
 ## 为什么要做这个
 
