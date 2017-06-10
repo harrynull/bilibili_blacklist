@@ -61,7 +61,6 @@
                     <th>内容</th>
                     <th></th>
                   </tr>
-                  <input v-model="str_filters" name="filters" id="filters" hidden>
                   <tr v-for="filter in my_filter">
                     <td>{{["普通","正则","用户"][filter.type]}}</td>
                     <td>{{filter.filter}}</td>
