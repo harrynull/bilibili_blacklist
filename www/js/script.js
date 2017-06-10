@@ -13,7 +13,8 @@ var app = new Vue({
     }(),
     detailid: 0,
     detailjson: "{}",
-    apply_status: {}
+    apply_status: {},
+    tip: document.cookie.indexOf('tip=')!=-1
   },
   methods: {
     refreshBlacklist: function(){
@@ -37,6 +38,7 @@ var app = new Vue({
           this.apply_status[id]=true;
           sessionStorage.apply_status=JSON.stringify(this.apply_status);
           setTimeout(this.refreshBlacklist, 500);
+          this.tipIfNeeded();
       }, response => {
         console.log("Failed to fetch blacklist")
       });  
@@ -44,6 +46,7 @@ var app = new Vue({
     removeItem: function(id){		
            this.$http.post('del_item', {"ids":id}).then(response => {		
                setTimeout(this.refreshBlacklist, 500);
+               this.tipIfNeeded();
            },response => {		
                console.log("Failed");
            });		
@@ -69,6 +72,16 @@ var app = new Vue({
         var d=new Date();
         d.setTime(time);
         return d.toLocaleString();
+    },
+    tipIfNeeded: function(){
+        if(!this.tip){
+            this.tip=true;
+            var date=new Date(); 
+            date.setTime(date.getTime+12*30*24*3600*1000);
+            document.cookie="tip=1; expires="+date.toGMTString(); 
+            
+            alert("修改成功，请打开任意一个B站视频，点击播放器右侧【屏蔽设定】里的【同步屏蔽列表】以生效修改！");
+        }
     }
   },
   mounted: function() {
