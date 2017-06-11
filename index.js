@@ -8,6 +8,9 @@ var database = require('./utils/database.js');
 var bilibili = require('./utils/bilibili.js');
 var login = require('./utils/login.js');
 
+var https = require('https'),
+    fs = require('fs');
+
 app.use('/', express.static(__dirname + '/www'));
 app.use('/js', express.static(__dirname + '/node_modules/bootstrap/dist/js'));
 app.use('/js', express.static(__dirname + '/node_modules/vue/dist'));
@@ -164,5 +167,12 @@ app.post('/del_item', function (req, response) {
     );
 })
 
-var server = app.listen(8000)
-console.log("Server started.")
+//var server = app.listen(8000)
+//console.log("Server started.")
+
+var options = {
+    key  : fs.readFileSync('/etc/letsencrypt/live/harrynull.tech/privkey.pem'),
+    cert : fs.readFileSync('/etc/letsencrypt/live/harrynull.tech/fullchain.pem')
+}
+
+https.createServer(options, app).listen(8443);
