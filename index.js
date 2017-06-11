@@ -149,7 +149,7 @@ app.post('/submit', function (req, response) {
 app.post('/add_item', function (req, response) {
     bilibili.add_filter(req.cookies.bilibili_cookies, req.body["type"], req.body["filter"], function(suc, result){
         //response.json(result);
-        response.redirect("/");
+        response.redirect("");
     });
 })
 app.post('/del_item', function (req, response) {
