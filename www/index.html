@@ -36,7 +36,8 @@
         <div id="navbar" class="navbar-collapse collapse">
           <div class="navbar-form navbar-right">
             <a href="login.html" class="btn btn-success" v-if="notLogin">登录</a>
-            <p v-if="!notLogin" style="padding-top:11.5px;color:#FFF;"> UID {{uid}}</p>
+            <p v-if="!notLogin" style="padding-top:11.5px;color:#FFF;float:right"> UID {{uid}}</p>
+            <a href="user.html" class="btn btn-success" style="float:right; margin-right:5px;">用户屏蔽</a>
 
           </div>
         </div><!--/.navbar-collapse -->
@@ -57,7 +58,7 @@
       <div class="row">
         <div class="col-md-6">
             <h2>分享列表 <a href="submit.html" class="btn btn-success" style="float:right;margin-right:15px">提交屏蔽词包</a></h2>
-            
+
             <hr>
             <table class="table table-hover">
                 <thead>
@@ -65,7 +66,7 @@
                 </thead>
                 <tbody>
                     <tr v-for="item in sharelist">
-                        <th>{{item.name}}</th><!--<th>{{item.vote}}--></th><th>{{item.usage}}</th>
+                        <th>{{item.name}}</th><!--<th>{{item.vote}}</th>--><th>{{item.usage}}</th>
                         <th><a href="javascript:void(0)" v-on:click="detail(item._id)">查看</a>
                         <!--<a :href="'upvote/'+item._id">赞</a>-->
                         <a href="javascript:void(0)" v-on:click="apply(item._id)" v-if="apply_status[item._id]==undefined">应用</a>

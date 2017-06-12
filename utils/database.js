@@ -24,9 +24,9 @@ exports.find=function(db, table, where, callback) {
         if(callback) callback(result);
     });
 };
-exports.update=function(db, table, where, value, callback) {
+exports.updateOne=function(db, table, where, value, options, callback) {
     var collection = db.collection(table);
-    collection.update(where, value, function(err, result) {
+    collection.updateOne(where, value, options, function(err, result) {
         if(err)
         {
             console.log('[Error][DB] Update: '+ err);
