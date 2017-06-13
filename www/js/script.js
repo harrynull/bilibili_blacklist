@@ -30,26 +30,26 @@ var app = new Vue({
     },
     apply: function(id){
       if(this.notLogin){
-          window.location.href="login.html"; 
+          window.location.href="login.html";
           return;
       }
       if(this.apply_status[this.detailid]!=undefined) return;
       this.$http.post('apply',{"id":id}).then(response => {
-          this.apply_status[id]=true;
+          this.$set(this.apply_status,id,true);
           sessionStorage.apply_status=JSON.stringify(this.apply_status);
           setTimeout(this.refreshBlacklist, 500);
           this.tipIfNeeded();
       }, response => {
         console.log("Failed to fetch blacklist")
-      });  
+      });
     },
-    removeItem: function(id){		
-           this.$http.post('del_item', {"ids":id}).then(response => {		
+    removeItem: function(id){
+           this.$http.post('del_item', {"ids":id}).then(response => {
                setTimeout(this.refreshBlacklist, 500);
                this.tipIfNeeded();
-           },response => {		
+           },response => {
                console.log("Failed");
-           });		
+           });
        },
     detail: function(id){
       this.$http.get('view/'+id).then(response => {
@@ -76,10 +76,10 @@ var app = new Vue({
     tipIfNeeded: function(){
         if(!this.tip){
             this.tip=true;
-            var date=new Date(); 
+            var date=new Date();
             date.setTime(date.getTime+12*30*24*3600*1000);
-            document.cookie="tip=1; expires="+date.toGMTString(); 
-            
+            document.cookie="tip=1; expires="+date.toGMTString();
+
             alert("修改成功，请打开任意一个B站视频，点击播放器右侧【屏蔽设定】里的【同步屏蔽列表】以生效修改！");
         }
     }
