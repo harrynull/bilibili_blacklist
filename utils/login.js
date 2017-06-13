@@ -19,7 +19,7 @@ exports.storeToken=function(uid, token){
             if(res.length==0){
                 database.insert(db, "users", {"uid": uid, "token": token}, closeDatabase);
             }else{
-                database.update(db, "users", {"uid": uid}, {$set: {"token": token}}, closeDatabase);
+                database.updateOne(db, "users", {"uid": uid}, {$set: {"token": token}}, closeDatabase);
             }
         });
     });
