@@ -2,7 +2,7 @@
   "name": "bilibili_blacklist",
   "version": "1.0.0",
   "description": "A website that allows users to share and manage their bilibili danmaku blacklist.",
-  "main": "index.js",
+  "main": "app.js",
   "dependencies": {
     "body-parser": "^1.17.2",
     "bootstrap": "^3.3.7",

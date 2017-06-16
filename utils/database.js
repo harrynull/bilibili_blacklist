@@ -35,7 +35,6 @@ exports.updateOne=function(db, table, where, value, options, callback) {
         if(callback) callback(result);
     });
 };
-
 exports.connect=function(callback){
     MongoClient.connect(DATABASE_ADDRESS, function(err, db) {
         if(err!=null) console.log(err);
