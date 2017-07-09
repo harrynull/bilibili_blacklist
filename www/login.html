@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -8,41 +9,50 @@
 
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <style>
-    body{
-        background:url(img/background.jpg) fixed center center no-repeat;
-        background-size: cover;
-    }
-    @media (max-width: 500px) {  
-        body{
-            background:url(img/background_small.jpg) fixed center center no-repeat;
+        body {
+            background: url(img/background.jpg) fixed center center no-repeat;
             background-size: cover;
         }
-    }
-    h1{
-        margin: 30px;
-        color: #FFF;
-    }
-    p{color: #FFF;}
-    .login{
-        background-color:rgba(0,0,0,0.1);
-        max-width: 360px;
-        padding: 30px;
-        margin: 20px auto;
-    }
-    body{
-        padding: 10% 0;
-    }
-    input{
-        margin: 5px 0;
-        width: 100%;
-    }
+
+        @media (max-width: 500px) {
+            body {
+                background: url(img/background_small.jpg) fixed center center no-repeat;
+                background-size: cover;
+            }
+        }
+
+        h1 {
+            margin: 30px;
+            color: #FFF;
+        }
+
+        p {
+            color: #FFF;
+        }
+
+        .login {
+            background-color: rgba(0, 0, 0, 0.1);
+            max-width: 360px;
+            padding: 30px;
+            margin: 20px auto;
+        }
+
+        body {
+            padding: 10% 0;
+        }
+
+        input {
+            margin: 5px 0;
+            width: 100%;
+        }
     </style>
     <script src="js/vue.js"></script>
     <script src="js/vue-resource.min.js"></script>
 
 </head>
+
 <body>
-<div class="container" style="text-align: center">
+    <div class="container" style="text-align: center">
         <h1>登录</h1>
         <p>注意：使用本网站即代表您接受<a href="eula.html">最终用户协议</a></p>
         <p>我B站账号会因此被盗吗？<a href="eula.html#qa">Q/A</a></p>
@@ -52,7 +62,7 @@
             <div v-if="oauthurl!=''">
                 <p>1. 首先先登录<a href="https://passport.bilibili.com/login">Bilibili</a></p>
                 <p>2. 点击<a :href="oauthurl" target="_blank">这里</a>，在新开的页面中点击确认登录。</p>
-                <p>或者用手机客户端扫描二维码：<a href="javascript:void(0)" v-on:click="getQRCode"  data-toggle="modal" data-target="#qrmodal">生成二维码</a></p>
+                <p>或者用手机客户端扫描二维码：<a href="javascript:void(0)" v-on:click="getQRCode" data-toggle="modal" data-target="#qrmodal">生成二维码</a></p>
                 <div class="modal fade" id="qrmodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
                     <div class="modal-dialog">
                         <div class="modal-content">
@@ -61,15 +71,18 @@
                                 <h4 class="modal-title" id="myModalLabel">二维码登录</h4>
                             </div>
                             <div class="modal-body">
-                                <img src="https://static-s.bilibili.com/passport/img/qr-tips.png" alt="提示"/>
+                                <img src="https://static-s.bilibili.com/passport/img/qr-tips.png" alt="提示" />
                                 <p style="color:#000;margin:20px;">打开手机Bilibili客户端，点开搜索，在搜索栏左边有扫描二维码。</p>
-                                <div id="qrcode"></div></div>
+                                <div id="qrcode"></div>
+                            </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
                                 <button type="button" class="btn btn-primary" v-on:click="getLoginInfo">扫描完毕</button>
                             </div>
-                        </div><!-- /.modal-content -->
-                    </div><!-- /.modal -->
+                        </div>
+                        <!-- /.modal-content -->
+                    </div>
+                    <!-- /.modal -->
                 </div>
                 <p>3. 点击<a href="javascript:void(0)" v-on:click="getLoginInfo">这里</a>确认登录状态。</p>
                 <p>目前状态：{{status}}</p>
@@ -92,49 +105,50 @@
     <script src="js/bootstrap.min.js"></script>
     <script src="js/jquery.qrcode.min.js"></script>
     <script>
-    var app = new Vue({
-      el: '.container',
-      data: {
-        oauthurl: "",
-        oauthkey: "",
-        status: "等待操作……"
-      },
-      methods: {
-        getOAuthKey: function(){
-          this.$http.get('login/getoauth').then(response => {
-            this.oauthurl = response.body.url;
-            this.oauthkey = response.body.oauthKey;
-          }, response => {
-            console.log("Failed to get OAuthKey");
-          });
-        },
-        getLoginInfo: function(){
-          this.$http.post('login/getinfo',{"oauthkey":this.oauthkey}).then(response => {
-            if(response.body==-4){
-                this.status="验证失败";
-                return;
+        var app = new Vue({
+            el: '.container',
+            data: {
+                oauthurl: "",
+                oauthkey: "",
+                status: "等待操作……"
+            },
+            methods: {
+                getOAuthKey: function () {
+                    this.$http.get('login/getoauth').then(response => {
+                        this.oauthurl = response.body.url;
+                        this.oauthkey = response.body.oauthKey;
+                    }, response => {
+                        console.log("Failed to get OAuthKey");
+                    });
+                },
+                getLoginInfo: function () {
+                    this.$http.post('login/getinfo', { "oauthkey": this.oauthkey }).then(response => {
+                        if (response.body == -4) {
+                            this.status = "验证失败";
+                            return;
+                        }
+                        console.log(response.bo)
+                        results = new RegExp(/DedeUserID=(\d*?)&.*ckMd5=(.*?)&.*SESSDATA=(.*?)&/g).exec(response.body.url)
+                        this.status = "验证成功!";
+                        $("#uid").val(results[1]);
+                        $("#ckmd5").val(results[2]);
+                        $("#sessdata").val(results[3]);
+                        $("#cookie_login").submit();
+                    }, response => {
+                        console.log("Failed to get login info");
+                    });
+                },
+                getQRCode: function () {
+                    $('#qrcode').text("");
+                    $('#qrcode').qrcode({ height: 128, width: 128, text: this.oauthurl });
+                    $('#qrcode').css("background-color", "#FFF");
+                }
+            },
+            mounted: function () {
+                this.getOAuthKey();
             }
-            results=new RegExp(/DedeUserID=(\d*?)&.*ckMd5=(.*?)&.*SESSDATA=(.*?)&/g).exec(response.body.url)
-            this.status="验证成功!";
-            $("#uid").val(results[1]);
-            $("#ckmd5").val(results[2]);
-            $("#sessdata").val(results[3]);
-            $("#cookie_login").submit();
-          }, response => {
-            console.log("Failed to get login info");
-          });
-        },
-        getQRCode: function(){
-            $('#qrcode').text("");
-            $('#qrcode').qrcode({height: 128, width: 128 ,text: this.oauthurl});
-            $('#qrcode').css("background-color","#FFF");
-        }
-      },
-      mounted: function(){
-        this.getOAuthKey();
-      }
-    });
-
+        });
     </script>
 </body>
+
 </html>

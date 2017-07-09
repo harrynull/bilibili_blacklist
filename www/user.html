@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -8,129 +9,138 @@
 
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <style>
-    body {
-      padding-top: 100px;
-    }
+        body {
+            padding-top: 100px;
+        }
     </style>
     <script src="js/vue.js"></script>
     <script src="js/vue-resource.min.js"></script>
 
 </head>
+
 <body>
     <div id="main-container">
-    <nav class="navbar navbar-inverse navbar-fixed-top">
-      <div class="container">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+        <nav class="navbar navbar-inverse navbar-fixed-top">
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false"
+                        aria-controls="navbar">
                 <span class="sr-only">开启</span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
                 <span class="icon-bar"></span>
             </button>
-          <a class="navbar-brand" href="index.html">Bilibili 屏蔽词分享平台</a>
+                    <a class="navbar-brand" href="index.html">Bilibili 屏蔽词分享平台</a>
+                </div>
+                <div id="navbar" class="navbar-collapse collapse">
+                    <div class="navbar-form navbar-right">
+                        <a href="login.html" class="btn btn-success" v-if="notLogin">登录</a>
+                        <p v-if="!notLogin" style="padding-top:11.5px;color:#FFF;float:right"> UID {{uid}}</p>
+                        <a href="user.html" class="btn btn-success" style="float:right; margin-right:5px;">用户屏蔽</a>
+
+                    </div>
+                </div>
+                <!--/.navbar-collapse -->
+            </div>
+        </nav>
+        <div class="container">
+            <form action="share_user_blacklist" method="POST">
+                <input type="submit" value="上传我的屏蔽列表" class="btn btn-primary btn-block" />
+            </form>
+            <div style="margin: 30px 0">
+                批量屏蔽被屏蔽人数达到
+                <input type="text" style="width: 3em" id="num" />及以上的用户
+                <a class="btn btn-primary" v-on:click="block">批量屏蔽</a>
+            </div>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>用户ID(加密)</th>
+                        <th>被屏蔽量</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="item in user_sharelist">
+                        <th>{{item.uid}}</th>
+                        <th>{{item.num}}</th>
+                        <th><a href="javascript:void(0)" v-on:click="apply(item.uid)" v-if="apply_status[item.uid]==undefined">应用</a>
+                            <span v-if="apply_status[item.uid]">已应用</span></th>
+                    </tr>
+                </tbody>
+            </table>
+
         </div>
-        <div id="navbar" class="navbar-collapse collapse">
-          <div class="navbar-form navbar-right">
-            <a href="login.html" class="btn btn-success" v-if="notLogin">登录</a>
-            <p v-if="!notLogin" style="padding-top:11.5px;color:#FFF;float:right"> UID {{uid}}</p>
-            <a href="user.html" class="btn btn-success" style="float:right; margin-right:5px;">用户屏蔽</a>
-
-          </div>
-        </div><!--/.navbar-collapse -->
-      </div>
-    </nav>
-    <div class="container">
-    <form action="share_user_blacklist" method="POST">
-        <input type="submit" value="上传我的屏蔽列表" class="btn btn-primary btn-block" />
-    </form>
-    <div style="margin: 30px 0">
-        批量屏蔽被屏蔽人数达到
-        <input type="text" style="width: 3em" id="num"/>及以上的用户
-        <a class="btn btn-primary" v-on:click="block">批量屏蔽</a>
+        <!-- /container -->
     </div>
-    <table class="table table-hover">
-        <thead>
-            <tr><th>用户ID(加密)</th><th>被屏蔽量</th><th>操作</th></tr>
-        </thead>
-        <tbody>
-            <tr v-for="item in user_sharelist">
-                <th>{{item.uid}}</th><th>{{item.num}}</th>
-                <th><a href="javascript:void(0)" v-on:click="apply(item.uid)" v-if="apply_status[item.uid]==undefined">应用</a>
-                <span v-if="apply_status[item.uid]">已应用</span></th>
-            </tr>
-        </tbody>
-    </table>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script>
+        var app = new Vue({
+            el: '#main-container',
+            data: {
+                user_sharelist: [],
+                notLogin: document.cookie.indexOf('bilibili_cookies=') == -1,
+                apply_status: {},
+                tip: document.cookie.indexOf('tip=') != -1,
+                uid: function () {
+                    var arr, reg = new RegExp("(^| )uid=([^;]*)(;|$)");
+                    if (arr = document.cookie.match(reg))
+                        return unescape(arr[2]);
+                    else
+                        return null;
+                }()
+            },
+            methods: {
+                apply: function (id) {
+                    if (this.notLogin) {
+                        window.location.href = "login.html";
+                        return;
+                    }
+                    if (this.apply_status[this.detailid] != undefined) return;
+                    this.$http.post('add_item', { type: 2, filter: id }).then(response => {
+                        this.$set(this.apply_status, id, true);
+                        sessionStorage.apply_status = JSON.stringify(this.apply_status);
+                        this.tipIfNeeded();
+                    }, response => {
+                        console.log("Failed to fetch blacklist")
+                    });
+                },
+                tipIfNeeded: function () {
+                    if (!this.tip) {
+                        this.tip = true;
+                        var date = new Date();
+                        date.setTime(date.getTime + 12 * 30 * 24 * 3600 * 1000);
+                        document.cookie = "tip=1; expires=" + date.toGMTString();
 
-</div> <!-- /container -->
-</div>
-<script src="js/jquery.min.js"></script>
-<script src="js/bootstrap.min.js"></script>
-<script>
-var app = new Vue({
-  el: '#main-container',
-  data: {
-    user_sharelist: [],
-    notLogin: document.cookie.indexOf('bilibili_cookies=')==-1,
-    apply_status: {},
-    tip: document.cookie.indexOf('tip=')!=-1,
-    uid: function(){
-            var arr,reg=new RegExp("(^| )uid=([^;]*)(;|$)");
-            if(arr=document.cookie.match(reg))
-                return unescape(arr[2]);
-            else
-                return null;
-    }()
-  },
-  methods: {
-    apply: function(id){
-      if(this.notLogin){
-          window.location.href="login.html";
-          return;
-      }
-      if(this.apply_status[this.detailid]!=undefined) return;
-      this.$http.post('add_item',{type:2, filter:id}).then(response => {
-          this.$set(this.apply_status,id,true);
-          sessionStorage.apply_status=JSON.stringify(this.apply_status);
-          this.tipIfNeeded();
-      }, response => {
-        console.log("Failed to fetch blacklist")
-      });
-    },
-    tipIfNeeded: function(){
-        if(!this.tip){
-            this.tip=true;
-            var date=new Date();
-            date.setTime(date.getTime+12*30*24*3600*1000);
-            document.cookie="tip=1; expires="+date.toGMTString();
-
-            alert("修改成功，请打开任意一个B站视频，点击播放器右侧【屏蔽设定】里的【同步屏蔽列表】以生效修改！");
-        }
-    },
-    block: function(){
-        var num = parseInt($("#num").val());
-        var count = 0;
-        for(var key in this.user_sharelist){
-            if(this.user_sharelist[key].num>=num) {
-                this.apply(this.user_sharelist[key].uid);
-                count++;
+                        alert("修改成功，请打开任意一个B站视频，点击播放器右侧【屏蔽设定】里的【同步屏蔽列表】以生效修改！");
+                    }
+                },
+                block: function () {
+                    var num = parseInt($("#num").val());
+                    var count = 0;
+                    for (var key in this.user_sharelist) {
+                        if (this.user_sharelist[key].num >= num) {
+                            this.apply(this.user_sharelist[key].uid);
+                            count++;
+                        }
+                    }
+                    $("#num").val("");
+                    alert("屏蔽成功！已屏蔽了" + count + "个用户。");
+                    this.tipIfNeeded();
+                }
+            },
+            mounted: function () {
+                try { this.apply_status = JSON.parse(sessionStorage.apply_status); }
+                catch (ex) { this.apply_status = {}; }
+                this.$http.get('fetch_user_sharelist').then(response => {
+                    this.user_sharelist = response.body.sort(function (x, y) { return x.num < y.num ? 1 : -1; });
+                }, response => {
+                    console.log("Failed to fetch user sharelist");
+                });
             }
-        }
-        $("#num").val("");
-        alert("屏蔽成功！已屏蔽了"+count+"个用户。");
-        this.tipIfNeeded();
-    }
-  },
-  mounted: function() {
-      try{this.apply_status=JSON.parse(sessionStorage.apply_status);}
-      catch(ex){this.apply_status={};}
-      this.$http.get('fetch_user_sharelist').then(response => {
-        this.user_sharelist = response.body.sort(function(x,y){return x.num<y.num?1:-1;});
-      }, response => {
-        console.log("Failed to fetch user sharelist");
-      });
-  }
-});
-
-</script>
+        });
+    </script>
 </body>
+
 </html>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -8,43 +9,49 @@
 
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <style>
-    body {
-        margin:5% 0;
-        padding:0 20%;
-        overflow-x:hidden;
-    }
-    .warp{
-        width:60%;
-    }
-    @media screen and (max-width:800px) {
         body {
-            margin:5% 0;
-            padding:0 5%;
-            overflow-x:hidden;
+            margin: 5% 0;
+            padding: 0 20%;
+            overflow-x: hidden;
         }
-        .warp{
-            width:90%;
+
+        .warp {
+            width: 60%;
         }
-    }
-    h2,h3{
-        margin: 25px 0;
-    }
+
+        @media screen and (max-width:800px) {
+            body {
+                margin: 5% 0;
+                padding: 0 5%;
+                overflow-x: hidden;
+            }
+            .warp {
+                width: 90%;
+            }
+        }
+
+        h2,
+        h3 {
+            margin: 25px 0;
+        }
     </style>
 
 </head>
+
 <body>
     <div class="container">
-    <div class="warp">
-        <h1 id="eula">最终用户协议</h1>
-        <p>如果您使用本网站，即代表您同意此最终用户协议和<a href="https://github.com/abc612008/bilibili_blacklist/blob/master/LICENSE">MIT License</a>。</p>
-        <p>注：此最终用户协议仅针对于此特定分发。该网站的其它分发可能拥有不同的最终用户协议。</p>
-        <h2>隐私</h2>
-        <p>在本网站使用Bilibili账户登录后，会且只会在数据库中留下您的Bilibili用户ID(UID)。UID在Bilibili也是公开的，且不会导致账号安全问题。我们通常不会公开这些数据，但是可能会将其用于统计用途。若因计算机病毒、黑客入侵或不可抗力导致数据泄漏，您同意我们不承担任何责任。<p>
-        <p>发布屏蔽词包或评论后，您的UID将会被公开在屏蔽词包和评论内。</p>
-        <h2>版权</h2>
-        <p style="font-weight:bold">除非您另行指定协议，否则您同意您将您的屏蔽词包以 <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.zh">Creative Commons 0</a> 协议释放到公共领域(Public Domain)。</p>
-        <p>本网站以MIT License开源，<a href="https://github.com/abc612008/bilibili_blacklist">查看源码</a></p>
-<pre>
+        <div class="warp">
+            <h1 id="eula">最终用户协议</h1>
+            <p>如果您使用本网站，即代表您同意此最终用户协议和<a href="https://github.com/abc612008/bilibili_blacklist/blob/master/LICENSE">MIT License</a>。</p>
+            <p>注：此最终用户协议仅针对于此特定分发。该网站的其它分发可能拥有不同的最终用户协议。</p>
+            <h2>隐私</h2>
+            <p>在本网站使用Bilibili账户登录后，会且只会在数据库中留下您的Bilibili用户ID(UID)。UID在Bilibili也是公开的，且不会导致账号安全问题。我们通常不会公开这些数据，但是可能会将其用于统计用途。若因计算机病毒、黑客入侵或不可抗力导致数据泄漏，您同意我们不承担任何责任。
+                <p>
+                    <p>发布屏蔽词包或评论后，您的UID将会被公开在屏蔽词包和评论内。</p>
+                    <h2>版权</h2>
+                    <p style="font-weight:bold">除非您另行指定协议，否则您同意您将您的屏蔽词包以 <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.zh">Creative Commons 0</a>                        协议释放到公共领域(Public Domain)。</p>
+                    <p>本网站以MIT License开源，<a href="https://github.com/abc612008/bilibili_blacklist">查看源码</a></p>
+                    <pre>
 MIT License
 
 Copyright (c) 2017 Null
@@ -67,28 +74,32 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 </pre>
-    <p><a href="licenses.html">点击查看</a>本网站使用的依赖的License</p>
-    <hr>
-    <h1 id="qa">Q/A</h1>
-    <h3>Q: 我B站账号会不会因此被盗？</h3>
-    <p>网站不能获得您的明文密码，数据库里也并不会储存您B站的任何类型的密码、Cookie或Token，所以即使数据库被入侵，您的B站账号也是安全的。</p>
-    <p>然而，极端情况下，黑客可能会入侵服务器之后修改网站源码来记录Cookie，在这种情况下，即使黑客无法获得密码明文，也可以在Cookie有效期内登录您的账号导致安全隐患。</p>
-    <p>（不过入侵改源码而且还没发现的可能性很小）</p>
-    <p>此外，如果网站是http协议的，那么在传输过程中可能会遭到中间人攻击导致cookie被盗。</p>
-    
-    <h3>Q: 我不想同意这个EULA协议怎么办？</h3>
-    <p>您还可以直接<a href="https://github.com/abc612008/bilibili_blacklist">下载源码</a>，然后在本地搭建此网站来避免直接使用这个网站（然后还可以删掉EULA 233（不过还是得遵守MIT License））</p>
-    <h3>Q: 我还是不相信你咋办？</h3>
-    <p>同上，您还可以自己在<a href="https://github.com/abc612008/bilibili_blacklist">本地搭建本网站</a>，这样就万无一失辣</p>
-    <h3>Q: 如果我发现了问题/想提建议怎么办？</h3>
-    <p>欢迎<a href="https://github.com/abc612008/bilibili_blacklist/issues/new">提出issue</a>。</p>
-    <h3>Q: 你做的太烂我看不下去了</h3>
-    <p>欢迎<a href="https://github.com/abc612008/bilibili_blacklist/pulls">发PR</a>来改善该网站哦。</p>
-    <h3>Q: 感觉做的还可以</h3>
-    <p>那来<a href="https://github.com/abc612008/bilibili_blacklist">点个Star</a>吧(ﾉ>ω<)ﾉ</p>
+                    <p><a href="licenses.html">点击查看</a>本网站使用的依赖的License</p>
+                    <hr>
+                    <h1 id="qa">Q/A</h1>
+                    <h3>Q: 我B站账号会不会因此被盗？</h3>
+                    <p>网站不能获得您的明文密码，数据库里也并不会储存您B站的任何类型的密码、Cookie或Token，所以即使数据库被入侵，您的B站账号也是安全的。</p>
+                    <p>然而，极端情况下，黑客可能会入侵服务器之后修改网站源码来记录Cookie，在这种情况下，即使黑客无法获得密码明文，也可以在Cookie有效期内登录您的账号导致安全隐患。</p>
+                    <p>（不过入侵改源码而且还没发现的可能性很小）</p>
+                    <p>此外，如果网站是http协议的，那么在传输过程中可能会遭到中间人攻击导致cookie被盗。</p>
+
+                    <h3>Q: 我不想同意这个EULA协议怎么办？</h3>
+                    <p>您还可以直接<a href="https://github.com/abc612008/bilibili_blacklist">下载源码</a>，然后在本地搭建此网站来避免直接使用这个网站（然后还可以删掉EULA
+                        233（不过还是得遵守MIT License））</p>
+                    <h3>Q: 我还是不相信你咋办？</h3>
+                    <p>同上，您还可以自己在<a href="https://github.com/abc612008/bilibili_blacklist">本地搭建本网站</a>，这样就万无一失辣</p>
+                    <h3>Q: 如果我发现了问题/想提建议怎么办？</h3>
+                    <p>欢迎<a href="https://github.com/abc612008/bilibili_blacklist/issues/new">提出issue</a>。</p>
+                    <h3>Q: 你做的太烂我看不下去了</h3>
+                    <p>欢迎<a href="https://github.com/abc612008/bilibili_blacklist/pulls">发PR</a>来改善该网站哦。</p>
+                    <h3>Q: 感觉做的还可以</h3>
+                    <p>那来<a href="https://github.com/abc612008/bilibili_blacklist">点个Star</a>吧(ﾉ>ω
+                        <)ﾉ</p>
+        </div>
     </div>
-    </div> <!-- /container -->
+    <!-- /container -->
 
     <script src="js/jquery.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
+
 </html>

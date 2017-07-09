@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -8,39 +9,44 @@
 
     <link href="css/bootstrap.min.css" rel="stylesheet">
     <style>
-    body {
-        margin:5% 0;
-        padding:0 20%;
-        overflow-x:hidden;
-    }
-    label{
-        padding-bottom:10px;
-    }
-    textarea{
-        width:500px;
-        height:200px;
-    }
-    .sumbit_form{
-        width:60%;
-    }
-    @media screen and (max-width:800px) {
         body {
-            margin:5% 0;
-            padding:0 5%;
-            overflow-x:hidden;
+            margin: 5% 0;
+            padding: 0 20%;
+            overflow-x: hidden;
         }
-        .sumbit_form{
-            width:90%;
+
+        label {
+            padding-bottom: 10px;
         }
-    }
+
+        textarea {
+            width: 500px;
+            height: 200px;
+        }
+
+        .sumbit_form {
+            width: 60%;
+        }
+
+        @media screen and (max-width:800px) {
+            body {
+                margin: 5% 0;
+                padding: 0 5%;
+                overflow-x: hidden;
+            }
+            .sumbit_form {
+                width: 90%;
+            }
+        }
     </style>
     <script src="js/vue.js"></script>
     <script src="js/vue-resource.min.js"></script>
 
 </head>
+
 <body>
-<div class="container">
-      <form class="sumbit_form form-horizontal" action="submit" method="post" onsubmit="return check()">
+    <div class="container">
+        <form class="sumbit_form form-horizontal" action="submit" method="post" onsubmit="return check()">
             <h1>提交屏蔽词包</h1>
             <p style="color:#888">提示：请避免将不同类型的屏蔽词放入一个屏蔽词包。</p>
             <div class="form-group">
@@ -56,29 +62,29 @@
             <div class="form-group">
                 <label class="control-label">从我的屏蔽词中导入</label>
                 <table class="table table-striped">
-                  <tr>
-                    <th style="width: 5em">类型</th>
-                    <th>内容</th>
-                    <th></th>
-                  </tr>
-                  <tr v-for="filter in my_filter">
-                    <td>{{["普通","正则","用户"][filter.type]}}</td>
-                    <td>{{filter.filter}}</td>
-                    <td><a href="javascript:void(0)" v-on:click="addToList(filter)">添加</a></td>
-                  </tr>
+                    <tr>
+                        <th style="width: 5em">类型</th>
+                        <th>内容</th>
+                        <th></th>
+                    </tr>
+                    <tr v-for="filter in my_filter">
+                        <td>{{["普通","正则","用户"][filter.type]}}</td>
+                        <td>{{filter.filter}}</td>
+                        <td><a href="javascript:void(0)" v-on:click="addToList(filter)">添加</a></td>
+                    </tr>
                 </table>
-                
+
                 <label class="control-label">屏蔽词</label>
                 <table class="table table-striped">
-                  <tr>
-                    <th style="width: 5em">类型</th>
-                    <th>内容</th>
-                  </tr>
-                  <input v-model="str_filters" name="filters" id="filters" hidden>
-                  <tr v-for="filter in filters">
-                    <td>{{["普通","正则","用户"][filter.type]}}</td>
-                    <td>{{filter.filter}}</td>
-                  </tr>
+                    <tr>
+                        <th style="width: 5em">类型</th>
+                        <th>内容</th>
+                    </tr>
+                    <input v-model="str_filters" name="filters" id="filters" hidden>
+                    <tr v-for="filter in filters">
+                        <td>{{["普通","正则","用户"][filter.type]}}</td>
+                        <td>{{filter.filter}}</td>
+                    </tr>
                 </table>
                 <div class="row">
                     <div class="col-md-4">
@@ -97,50 +103,52 @@
             </div>
 
             <div class="form-group">
-            <p style="font-size:small">注：除非您另行指定协议，您同意将您的屏蔽词包以 <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.zh">Creative Commons 0</a> 协议释放到公共领域。</p>
+                <p style="font-size:small">注：除非您另行指定协议，您同意将您的屏蔽词包以 <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.zh">Creative Commons 0</a>                    协议释放到公共领域。</p>
                 <button class="btn btn-success">提交</button>
             </div>
-      </form>
+        </form>
 
-    </div> <!-- /container -->
+    </div>
+    <!-- /container -->
 
     <script src="js/jquery.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
     <script>
-    var app = new Vue({
-      el: '.sumbit_form',
-      data: {
-        filters: [],
-        my_filter: [],
-        str_filters: ""
-      },
-      methods:{
-        addToList: function(filter){
-            this.filters.push({"type":filter.type,"filter":filter.filter});
-            this.str_filters=JSON.stringify(this.filters);
-        },
-        addToListFromTextbox: function(){
-            this.addToList({"type":$("#select-type").val(),"filter":$("#content").val()});
-            $("#content").val("");
-        }
-      },
-      mounted:function(){
-          this.$http.get('fetch_blacklist').then(response => {
-            if(response.body.code!=undefined){
-              console.log("Failed to fetch blacklist: "+response.body.code);
-              return;
+        var app = new Vue({
+            el: '.sumbit_form',
+            data: {
+                filters: [],
+                my_filter: [],
+                str_filters: ""
+            },
+            methods: {
+                addToList: function (filter) {
+                    this.filters.push({ "type": filter.type, "filter": filter.filter });
+                    this.str_filters = JSON.stringify(this.filters);
+                },
+                addToListFromTextbox: function () {
+                    this.addToList({ "type": $("#select-type").val(), "filter": $("#content").val() });
+                    $("#content").val("");
+                }
+            },
+            mounted: function () {
+                this.$http.get('fetch_blacklist').then(response => {
+                    if (response.body.code != undefined) {
+                        console.log("Failed to fetch blacklist: " + response.body.code);
+                        return;
+                    }
+                    this.my_filter = response.body;
+                }, response => {
+                    console.log("Failed to fetch blacklist")
+                });
             }
-            this.my_filter = response.body;
-          }, response => {
-            console.log("Failed to fetch blacklist")
-          });
-      }
-    })
-    if(document.cookie.indexOf("token=")==-1) window.location.href="login.html";
-    var check=function(){
-        if($("#filters").val()==""){alert("您需要添加至少一个屏蔽词");return false;}
-        return true;
-    }
+        });
+        if (document.cookie.indexOf("token=") == -1) window.location.href = "login.html";
+        var check = function () {
+            if ($("#filters").val() == "") { alert("您需要添加至少一个屏蔽词"); return false; }
+            return true;
+        }
     </script>
 </body>
+
 </html>
