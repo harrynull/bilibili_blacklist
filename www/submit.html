@@ -56,7 +56,7 @@
 
             <div class="form-group">
                 <label class="control-label">介绍</label>
-                <textarea class="form-control" name="description"></textarea>
+                <textarea class="form-control" name="description" placeholder="可选"></textarea>
             </div>
 
             <div class="form-group">
@@ -65,25 +65,27 @@
                     <tr>
                         <th style="width: 5em">类型</th>
                         <th>内容</th>
-                        <th></th>
+                        <th style="width: 5em"><a href="javascript:void(0)" v-on:click="addAll()">全加</a></th>
                     </tr>
-                    <tr v-for="filter in my_filter">
-                        <td>{{["普通","正则","用户"][filter.type]}}</td>
+                    <tr v-for="filter in my_filter" v-if="filter.type!=2">
+                        <td>{{["普通","正则"][filter.type]}}</td>
                         <td>{{filter.filter}}</td>
                         <td><a href="javascript:void(0)" v-on:click="addToList(filter)">添加</a></td>
                     </tr>
                 </table>
 
                 <label class="control-label">屏蔽词</label>
+                <input v-model="str_filters" name="filters" id="filters" hidden>
                 <table class="table table-striped">
                     <tr>
                         <th style="width: 5em">类型</th>
                         <th>内容</th>
+                        <th style="width: 5em"><a href="javascript:void(0)" v-on:click="removeAll()">全删</a></th>
                     </tr>
-                    <input v-model="str_filters" name="filters" id="filters" hidden>
                     <tr v-for="filter in filters">
-                        <td>{{["普通","正则","用户"][filter.type]}}</td>
+                        <td>{{["普通","正则"][filter.type]}}</td>
                         <td>{{filter.filter}}</td>
+                        <td><a href="javascript:void(0)" v-on:click="removeFromList(filter)">删除</a></td>
                     </tr>
                 </table>
                 <div class="row">
@@ -100,6 +102,8 @@
                         <a v-on:click="addToListFromTextbox" class="btn btn-success">添加</a>
                     </div>
                 </div>
+                <br>
+                <p style="color: orange" id="warning"></p>
             </div>
 
             <div class="form-group">
@@ -123,11 +127,34 @@
             },
             methods: {
                 addToList: function (filter) {
+                    for(let item of this.filters){
+                        if(item.filter == filter.filter){
+                            $("#warning").text("该屏蔽词已存在!");
+                            return
+                        }
+                    }
                     this.filters.push({ "type": filter.type, "filter": filter.filter });
                     this.str_filters = JSON.stringify(this.filters);
                 },
+                removeFromList: function (filter) {
+                    this.filters = this.filters.filter(function(item) { return item !== filter });
+                    this.str_filters = JSON.stringify(this.filters);
+                },
+                addAll: function(){
+                    for(let filter of this.my_filter){
+                        if(filter.type==2) continue
+                        this.addToList(filter);
+                    }
+                    $("#warning").text("");
+                },
+                removeAll: function(){
+                    this.filters = [];
+                    this.str_filters = "[]";
+                },
                 addToListFromTextbox: function () {
-                    this.addToList({ "type": $("#select-type").val(), "filter": $("#content").val() });
+                    $("#warning").text("");
+                    let filter = { "type": $("#select-type").val(), "filter": $("#content").val() };
+                    this.addToList(filter);
                     $("#content").val("");
                 }
             },

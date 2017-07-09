@@ -18,7 +18,7 @@
             margin: 20px;
         }
     </style>
-    <script src="js/vue.js"></script>
+    <script src="js/vue.min.js"></script>
     <script src="js/vue-resource.min.js"></script>
 
 </head>
@@ -82,7 +82,7 @@
                                 <th><a href="javascript:void(0)" v-on:click="detail(item._id)">查看</a>
                                     <!--<a :href="'upvote/'+item._id">赞</a>-->
                                     <a href="javascript:void(0)" v-on:click="apply(item._id)" v-if="apply_status[item._id]==undefined">应用</a>
-                                    <span v-if="apply_status[item._id]==true">已应用</span></th>
+                                    <span v-if="apply_status[item._id]==true">已加</span></th>
                             </tr>
                         </tbody>
                     </table>
