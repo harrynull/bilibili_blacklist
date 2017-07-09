@@ -18,7 +18,7 @@
             margin: 20px;
         }
     </style>
-    <script src="js/vue.min.js"></script>
+    <script src="js/vue.js"></script>
     <script src="js/vue-resource.min.js"></script>
 
 </head>
@@ -98,8 +98,8 @@
                                 <p>名称: {{detailjson["name"]}}</p>
                                 <p>发布时间：{{getTime(detailjson["time"])}}</p>
                                 <p>使用量: {{detailjson["usage"]}}</p>
-                                <p>介绍: </p>
-                                <pre>{{detailjson["description"]}}</pre>
+                                <p>介绍: <span  v-if='detailjson["description"]==""'>无</span></p>
+                                <pre v-if='detailjson["description"]!=""'>{{detailjson["description"]}}</pre>
                                 <p>创建者: <a :href="'https://space.bilibili.com/'+detailjson['uid']">{{detailjson["uid"]}}</a></p>
                                 <p>屏蔽词</p>
                                 <table class="table table-striped">
@@ -114,13 +114,15 @@
                                 </table>
                                 <p>评论：</p>
                                 <div class="comments">
-                                    <div class="comment" v-for="comment in detailjson['comments']"><a :href="'https://space.bilibili.com/'+comment.uid">{{comment.uid}}</a>: {{comment.content}}</div>
+                                    <div class="comment" v-for="comment in detailjson['comments']" v-if="comment.content!=''"><a :href="'https://space.bilibili.com/'+comment.uid">{{comment.uid}}</a>: {{comment.content}}</div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-10">
-                                        <input type="text" placeholder="评论内容" class="form-control" id="comment_content"></div>
+                                        <input type="text" placeholder="评论内容" class="form-control" id="comment_content">
+                                    </div>
                                     <div class="col-md-2">
-                                        <button type="button" class="btn btn-success" v-on:click="postComment">发布</button></div>
+                                        <button type="button" class="btn btn-success" v-on:click="postComment">发布</button>
+                                    </div>
                                 </div>
                             </div>
                             <div class="modal-footer">

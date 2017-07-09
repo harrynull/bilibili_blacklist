@@ -52,18 +52,22 @@ var app = new Vue({
       });
     },
     detail: function (id) {
-      this.$http.get('view/' + id).then(response => {
-        this.detailid = id;
-        this.detailjson = response.body[0];
-        $("#detail_modal").modal();
-      }, response => {
-        console.log("Failed to fetch detail");
-      });
+      for (let item of this.sharelist) {
+        if (item._id == id) {
+          this.detailid = id;
+          this.detailjson = item;
+          $("#detail_modal").modal();
+        }
+      }
     },
     postComment: function () {
-      this.$http.post('comment', { "id": this.detailid, "content": $("#comment_content").val() }).then(response => {
-        this.detailjson.comments.push({ "uid": this.uid, "content": $("#comment_content").val() });
-        $("#comment_content").val("");
+      comment_input=$("#comment_content")
+      if(comment_input.val()==""){
+        comment_input.focus();
+      }
+      this.$http.post('comment', { "id": this.detailid, "content": comment_input.val() }).then(response => {
+        this.detailjson.comments.push({ "uid": this.uid, "content": comment_input.val() });
+        comment_input.val("");
       }, response => {
         console.log("Failed to comment");
       });

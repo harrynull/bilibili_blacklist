@@ -61,14 +61,6 @@ app.get('/fetch_sharelist', function (req, response) {
         });
     });
 });
-app.get('/view/:id', function (req, response) {
-    database.connect(function (db) {
-        database.find(db, "sharelist", { "_id": database.ObjectId(req.params.id) }, function (res) {
-            response.json(res);
-            db.close();
-        });
-    });
-});
 app.post('/apply', function (req, response) {
     var query = { "_id": database.ObjectId(req.body["id"]) };
     database.connect(function (db) {
