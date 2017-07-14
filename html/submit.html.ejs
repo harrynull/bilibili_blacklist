@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <title>Bilibili 屏蔽词分享平台 | 提交屏蔽词</title>
+
+    <% include template/head %>
+    <style>
+        body {
+            margin: 5% 0;
+            padding: 0 20%;
+            overflow-x: hidden;
+        }
+
+        label {
+            padding-bottom: 10px;
+        }
+
+        textarea {
+            width: 500px;
+            height: 200px;
+        }
+
+        .sumbit_form {
+            width: 60%;
+        }
+
+        @media screen and (max-width:800px) {
+            body {
+                margin: 5% 0;
+                padding: 0 5%;
+                overflow-x: hidden;
+            }
+            .sumbit_form {
+                width: 90%;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="container">
+        <form class="sumbit_form form-horizontal" action="submit" method="post" onsubmit="return check()">
+            <h1>提交屏蔽词包</h1>
+            <p style="color:#888">提示：请避免将不同类型的屏蔽词放入一个屏蔽词包。</p>
+            <div class="form-group">
+                <label class="control-label">名称</label>
+                <input type="text" placeholder="给您提交的屏蔽词包起个名字" class="input-xlarge form-control" name="name" required>
+            </div>
+
+            <div class="form-group">
+                <label class="control-label">介绍</label>
+                <textarea class="form-control" name="description" placeholder="可选"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="control-label">从我的屏蔽词中导入</label>
+                <table class="table table-striped">
+                    <tr>
+                        <th style="width: 5em">类型</th>
+                        <th>内容</th>
+                        <th style="width: 5em"><a href="javascript:void(0)" v-on:click="addAll()">全加</a></th>
+                    </tr>
+                    <tr v-for="filter in my_filter" v-if="filter.type!=2">
+                        <td>{{["普通","正则"][filter.type]}}</td>
+                        <td>{{filter.filter}}</td>
+                        <td><a href="javascript:void(0)" v-on:click="addToList(filter)">添加</a></td>
+                    </tr>
+                </table>
+
+                <label class="control-label">屏蔽词</label>
+                <input v-model="str_filters" name="filters" id="filters" hidden>
+                <table class="table table-striped">
+                    <tr>
+                        <th style="width: 5em">类型</th>
+                        <th>内容</th>
+                        <th style="width: 5em"><a href="javascript:void(0)" v-on:click="removeAll()">全删</a></th>
+                    </tr>
+                    <tr v-for="filter in filters">
+                        <td>{{["普通","正则"][filter.type]}}</td>
+                        <td>{{filter.filter}}</td>
+                        <td><a href="javascript:void(0)" v-on:click="removeFromList(filter)">删除</a></td>
+                    </tr>
+                </table>
+                <div class="row">
+                    <div class="col-md-4">
+                        <select class="form-control" name="select-type" id="select-type">
+                          <option value="0">普通</option>
+                          <option value="1">正则</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" placeholder="屏蔽内容" class="form-control" name="content" id="content">
+                    </div>
+                    <div class="col-md-2">
+                        <a v-on:click="addToListFromTextbox" class="btn btn-success">添加</a>
+                    </div>
+                </div>
+                <br>
+                <p style="color: orange" id="warning"></p>
+            </div>
+
+            <div class="form-group">
+                <p style="font-size:small">注：除非您另行指定协议，您同意将您的屏蔽词包以 <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.zh">Creative Commons 0</a>                    协议释放到公共领域。</p>
+                <button class="btn btn-success">提交</button>
+            </div>
+        </form>
+
+    </div>
+    <!-- /container -->
+
+    <% include template/foot %>
+
+    <script>
+        var app = new Vue({
+            el: '.sumbit_form',
+            data: {
+                filters: [],
+                my_filter: [],
+                str_filters: ""
+            },
+            methods: {
+                addToList: function (filter) {
+                    for(let item of this.filters){
+                        if(item.filter == filter.filter){
+                            $("#warning").text("该屏蔽词已存在!");
+                            return
+                        }
+                    }
+                    this.filters.push({ "type": filter.type, "filter": filter.filter });
+                    this.str_filters = JSON.stringify(this.filters);
+                },
+                removeFromList: function (filter) {
+                    this.filters = this.filters.filter(function(item) { return item !== filter });
+                    this.str_filters = JSON.stringify(this.filters);
+                },
+                addAll: function(){
+                    for(let filter of this.my_filter){
+                        if(filter.type==2) continue
+                        this.addToList(filter);
+                    }
+                    $("#warning").text("");
+                },
+                removeAll: function(){
+                    this.filters = [];
+                    this.str_filters = "[]";
+                },
+                addToListFromTextbox: function () {
+                    $("#warning").text("");
+                    let filter = { "type": $("#select-type").val(), "filter": $("#content").val() };
+                    this.addToList(filter);
+                    $("#content").val("");
+                }
+            },
+            mounted: function () {
+                this.$http.get('fetch_blacklist').then(response => {
+                    if (response.body.code != undefined) {
+                        console.log("Failed to fetch blacklist: " + response.body.code);
+                        return;
+                    }
+                    this.my_filter = response.body;
+                }, response => {
+                    console.log("Failed to fetch blacklist")
+                });
+            }
+        });
+        if (document.cookie.indexOf("token=") == -1) window.location.href = "login.html";
+        var check = function () {
+            if ($("#filters").val() == "") { alert("您需要添加至少一个屏蔽词"); return false; }
+            return true;
+        }
+    </script>
+</body>
+
+</html>

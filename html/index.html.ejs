@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <title>Bilibili 屏蔽词分享平台</title>
+    <% include template/head %>
+    <style>
+        body {
+            padding-top: 50px;
+            padding-bottom: 20px;
+        }
+
+        .comment {
+            margin: 20px;
+        }
+    </style>
+</head>
+
+<body>
+<div id="main-container">
+    <% include template/header %>
+        <!-- Main jumbotron for a primary marketing message or call to action -->
+        <div class="jumbotron">
+            <div class="container">
+                <h1>Bilibili 屏蔽词分享平台</h1>
+                <p>这是一个可以用来分享、管理您在Bilibili设置的弹幕屏蔽词的网站</p>
+                <p>请注意：这并不是Bilibili的官方网站，与Bilibili官方无关</p>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- Example row of columns -->
+            <div class="row">
+                <div class="col-md-6">
+                    <h2>分享列表 <a href="submit.html" class="btn btn-success" style="float:right;margin-right:15px">提交屏蔽词包</a></h2>
+
+                    <hr>
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>名称</th>
+                                <!--<th>票数</th>-->
+                                <th>使用量</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in sharelist">
+                                <th>{{item.name}}</th>
+                                <!--<th>{{item.vote}}</th>-->
+                                <th>{{item.usage}}</th>
+                                <th><a href="javascript:void(0)" v-on:click="detail(item._id)">查看</a>
+                                    <!--<a :href="'upvote/'+item._id">赞</a>-->
+                                    <a href="javascript:void(0)" v-on:click="apply(item._id)" v-if="apply_status[item._id]==undefined">应用</a>
+                                    <span v-if="apply_status[item._id]==true">已加</span></th>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal fade" id="detail_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                                <h4 class="modal-title" id="myModalLabel">详细</h4>
+                            </div>
+                            <div class="modal-body">
+                                <p>名称: {{detailjson["name"]}}</p>
+                                <p>发布时间：{{getTime(detailjson["time"])}}</p>
+                                <p>使用量: {{detailjson["usage"]}}</p>
+                                <p>介绍: <span  v-if='detailjson["description"]==""'>无</span></p>
+                                <pre v-if='detailjson["description"]!=""'>{{detailjson["description"]}}</pre>
+                                <p>创建者: <a :href="'https://space.bilibili.com/'+detailjson['uid']">{{detailjson["uid"]}}</a></p>
+                                <p>屏蔽词</p>
+                                <table class="table table-striped">
+                                    <tr>
+                                        <th style="width: 5em">类型</th>
+                                        <th>内容</th>
+                                    </tr>
+                                    <tr v-for="filter in detailjson['filters']">
+                                        <td>{{["普通","正则","用户"][filter.type]}}</td>
+                                        <td>{{filter.filter}}</td>
+                                    </tr>
+                                </table>
+                                <p>评论：</p>
+                                <div class="comments">
+                                    <div class="comment" v-for="comment in detailjson['comments']" v-if="comment.content!=''"><a :href="'https://space.bilibili.com/'+comment.uid">{{comment.uid}}</a>: {{comment.content}}</div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-10">
+                                        <input type="text" placeholder="评论内容" class="form-control" id="comment_content">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-success" v-on:click="postComment">发布</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-success" v-on:click="apply(detailid)" s:disabled="apply_status[detailid]!=undefined">{{apply_status[detailid]==undefined?"应用":"已应用"}}</button>
+                                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                            </div>
+                        </div>
+                        <!-- /.modal-content -->
+                    </div>
+                    <!-- /.modal -->
+                </div>
+                <div class="col-md-6">
+                    <h2>您的屏蔽列表</h2>
+                    <hr>
+                    <div v-if="!notLogin">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>类型</th>
+                                    <th>屏蔽内容</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="filter in blacklist">
+                                    <th>{{["普通","正则","用户"][filter.type]}}</th>
+                                    <th>{{filter.filter}}</th>
+                                    <th><a href="javascript:void(0)" v-on:click="removeItem(filter.id)">删除</a></th>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <form action="add_item" method="post">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <select class="form-control" name="type" id="type">
+                          <option value="0">普通</option>
+                          <option value="1">正则</option>
+                          <option value="2">用户</option>
+                        </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" placeholder="屏蔽内容" class="form-control" name="filter" id="filter">
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-success">添加</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div v-if="notLogin">
+                        <a href="login.html" class="btn btn-success">登录</a>
+                    </div>
+                </div>
+            </div>
+
+            <hr>
+
+            <footer>
+                <p>&copy; 2017 <a href="https://harrynull.tech">Harry Yu</a>. Licensed under MIT License. <a href="https://github.com/abc612008/bilibili_blacklist">Contribute to it</a>.</p>
+            </footer>
+        </div>
+        <!-- /container -->
+    </div>
+
+    <script src="js/script.js"></script>
+    <% include template/foot %>
+</body>
+
+</html>
