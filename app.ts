@@ -17,8 +17,14 @@ app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.get('*.html', function(req, res) {
-   res.render(RootDir + '/html' + req.url + ".ejs");
+app.get('/', function (req, res) {
+    res.render(RootDir + '/html/index.html.ejs');
+});
+app.get('*.html', function (req, res) {
+    res.render(RootDir + '/html' + req.url + ".ejs", function (err: Error, html: string) {
+        if(!err) res.send(html);
+        else {res.status(404); res.send("Page Not Found."); }
+    });
 });
 
 app.post('/login/cookies', function (request, response) {
