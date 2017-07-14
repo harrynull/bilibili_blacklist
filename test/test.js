@@ -1,8 +1,8 @@
 require("should");
 var request = require('supertest')
-  , app     = require('../index.js').app
+  , app     = require('../build/app.js').app
   , assert  = require("assert")
-  , login   = require('../utils/login.js');
+  , login   = require('../build/src/login.js');
 
 describe('login', function() {
   describe('#generateToken()', function() {
