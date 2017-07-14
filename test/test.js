@@ -7,7 +7,7 @@ var request = require('supertest')
 describe('login', function() {
   describe('#generateToken()', function() {
     it('should return a string of number from 0-100000000000', function() {
-      for(var i=0;i<100;i++){
+      for(var i=0;i<200;i++){
         parseInt(login.generateToken()).should.be.within(0, 100000000000);
       }
     });
