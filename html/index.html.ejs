@@ -2,12 +2,8 @@
 <html lang="zh-CN">
 
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bilibili 屏蔽词分享平台</title>
-
-    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <% include template/head %>
     <style>
         body {
             padding-top: 50px;
@@ -18,37 +14,12 @@
             margin: 20px;
         }
     </style>
-    <script src="js/vue.min.js"></script>
-    <script src="js/vue-resource.min.js"></script>
-
+    <script src="js/script.js"></script>
 </head>
 
 <body>
-    <div id="main-container">
-        <nav class="navbar navbar-inverse navbar-fixed-top">
-            <div class="container">
-                <div class="navbar-header">
-                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false"
-                        aria-controls="navbar">
-                <span class="sr-only">开启</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-                    <a class="navbar-brand" href="#">Bilibili 屏蔽词分享平台</a>
-                </div>
-                <div id="navbar" class="navbar-collapse collapse">
-                    <div class="navbar-form navbar-right">
-                        <a href="login.html" class="btn btn-success" v-if="notLogin">登录</a>
-                        <p v-if="!notLogin" style="padding-top:11.5px;color:#FFF;float:right"> UID {{uid}}</p>
-                        <a href="user.html" class="btn btn-success" style="float:right; margin-right:5px;">用户屏蔽</a>
-
-                    </div>
-                </div>
-                <!--/.navbar-collapse -->
-            </div>
-        </nav>
-
+<div id="main-container">
+    <% include template/header %>
         <!-- Main jumbotron for a primary marketing message or call to action -->
         <div class="jumbotron">
             <div class="container">
@@ -187,9 +158,7 @@
         </div>
         <!-- /container -->
     </div>
-    <script src="js/script.js"></script>
-    <script src="js/jquery.min.js"></script>
-    <script src="js/bootstrap.min.js"></script>
+    <% include template/foot %>
 </body>
 
 </html>

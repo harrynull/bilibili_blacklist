@@ -9,16 +9,17 @@ import bilibili = require('./src/bilibili');
 import login = require('./src/login');
 import interfaces = require('./src/interface');
 
+app.set('view engine', 'ejs');
+
 let RootDir = __dirname + "/.."
-app.use('/', express.static(RootDir + '/www'));
-app.use('/js', express.static(RootDir + '/node_modules/bootstrap/dist/js'));
-app.use('/js', express.static(RootDir + '/node_modules/vue/dist'));
-app.use('/js', express.static(RootDir + '/node_modules/vue-resource/dist'));
-app.use('/js', express.static(RootDir + '/node_modules/jquery/dist'));
-app.use('/css', express.static(RootDir + '/node_modules/bootstrap/dist/css'));
+app.use('/', express.static(RootDir + '/html'));
 app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+app.get('*.html', function(req, res) {
+   res.render(RootDir + '/html' + req.url + ".ejs");
+});
 
 app.post('/login/cookies', function (request, response) {
     let uid = request.body["DedeUserID"];
@@ -48,6 +49,7 @@ app.post('/login/getinfo', function (req, response) {
         response.json(res);
     });
 });
+
 app.get('/fetch_blacklist', function (req, response) {
     bilibili.fetchBlacklist(req.cookies.bilibili_cookies,
         function (suc, res) {

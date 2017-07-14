@@ -2,12 +2,9 @@
 <html lang="zh-CN">
 
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bilibili 屏蔽词分享平台 | 登录</title>
 
-    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <% include template/head %>
     <style>
         body {
             background: url(img/background.jpg) fixed center center no-repeat;
@@ -46,8 +43,6 @@
             width: 100%;
         }
     </style>
-    <script src="js/vue.js"></script>
-    <script src="js/vue-resource.min.js"></script>
 
 </head>
 
@@ -101,8 +96,8 @@
             </form>
         </div>
     </div>
-    <script src="js/jquery.min.js"></script>
-    <script src="js/bootstrap.min.js"></script>
+    <% include template/foot %>
+
     <script src="js/jquery.qrcode.min.js"></script>
     <script>
         var app = new Vue({
