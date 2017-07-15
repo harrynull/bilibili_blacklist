@@ -21,7 +21,7 @@ Bilibili的弹幕环境是众所周知的不尽人意，而其自带的弹幕屏
 1. clone源码
 2. ``npm install``
 3. 安装[mongodb](https://www.mongodb.com/download-center?jmp=nav).
-4. ``node .``
+4. ``npm run build && node .``
 
 从已有网站导入分享数据：
 
@@ -45,7 +45,7 @@ Bilibili的弹幕环境是众所周知的不尽人意，而其自带的弹幕屏
 
 ## 更新
 
-更新内容：
+更新内容 (2017/7/14)：
 
 C = Change
 I = Improve & Optimize

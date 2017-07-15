@@ -56,7 +56,7 @@
             <p style="font-weight:bold">通过OAuth登录</p>
             <div v-if="oauthurl!=''">
                 <p>1. 首先先登录<a href="https://passport.bilibili.com/login">Bilibili</a></p>
-                <p>2. 点击<a :href="oauthurl" target="_blank">这里</a>，在新开的页面中点击确认登录。</p>
+                <p>2. 点击<a :href="oauthurl" target="_blank">这里</a>，在新开的页面中点击确认登录。按钮点击没有反应是正常的，点完后关闭页面即可。</p>
                 <p>或者用手机客户端扫描二维码：<a href="javascript:void(0)" v-on:click="getQRCode" data-toggle="modal" data-target="#qrmodal">生成二维码</a></p>
                 <div class="modal fade" id="qrmodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
                     <div class="modal-dialog">
