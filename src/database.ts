@@ -102,7 +102,7 @@ export class Database {
      * 
      * @memberof Database
      */
-    public close(){
+    public close() {
         this.db.close();
     }
 
@@ -114,7 +114,8 @@ export class Database {
      * @returns 
      * @memberof Database
      */
-    public static getID(id: string){
+    public static getID(id: string) {
         return new mongo.ObjectID(id);
     }
 }
+
