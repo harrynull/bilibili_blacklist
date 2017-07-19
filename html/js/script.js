@@ -14,6 +14,7 @@ var app = new Vue({
     detailid: 0,
     detailjson: "{}",
     apply_status: {},
+    vote_choice: -1,
     tip: document.cookie.indexOf('tip=') != -1
   },
   methods: {
@@ -52,6 +53,7 @@ var app = new Vue({
       });
     },
     detail: function (id) {
+      this.vote_choice=-1;
       for (let item of this.sharelist) {
         if (item._id == id) {
           this.detailid = id;
@@ -61,12 +63,22 @@ var app = new Vue({
       }
     },
     postComment: function () {
+      if (this.notLogin) {
+        window.location.href = "login.html";
+        return;
+      }
       comment_input=$("#comment_content")
       if(comment_input.val()==""){
         comment_input.focus();
+        return;
       }
-      this.$http.post('comment', { "id": this.detailid, "content": comment_input.val() }).then(response => {
-        this.detailjson.comments.push({ "uid": this.uid, "content": comment_input.val() });
+      if(this.vote_choice==-1){
+        $("#good").css("color","orange");
+        $("#bad").css("color","orange");   
+        return;
+      }
+      this.$http.post('comment', { "id": this.detailid, "content": comment_input.val(), "like":this.vote_choice }).then(response => {
+        this.detailjson.comments.push({ "uid": this.uid, "content": comment_input.val(), "like":this.vote_choice });
         comment_input.val("");
       }, response => {
         console.log("Failed to comment");
@@ -86,6 +98,18 @@ var app = new Vue({
 
         alert("修改成功，请打开任意一个B站视频，点击播放器右侧【屏蔽设定】里的【同步屏蔽列表】以生效修改！");
       }
+    },
+    calcVote: function(item) {
+      var like = 0;
+      var dislike = 0;
+      for(var comment of item.comments) {if(comment.like) like++; else if(comment.like===false) dislike++;} 
+      if(like+dislike==0) return "N/A";
+      return like/(like+dislike)*100+"% ("+like+"/"+(like+dislike)+")";
+    },
+    vote: function(choice){ //choice: 1-like, 0-dislike
+      if(choice==1) {$("#good").css("color","green");$("#bad").css("color","black");}
+      else {$("#good").css("color","black");$("#bad").css("color","red");}
+      this.vote_choice=choice;
     }
   },
   mounted: function () {

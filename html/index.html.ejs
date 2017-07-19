@@ -4,34 +4,33 @@
 <head>
     <title>Bilibili 屏蔽词分享平台</title>
     <% include template/head %>
-    <style>
-        body {
-            padding-top: 50px;
-            padding-bottom: 20px;
-        }
+        <style>
+            body {
+                padding-top: 50px;
+                padding-bottom: 20px;
+            }
 
-        .comment {
-            margin: 20px;
-        }
-    </style>
+            .comment {
+                margin: 20px;
+            }
+        </style>
 </head>
 
 <body>
-<div id="main-container">
-    <% include template/header %>
-        <!-- Main jumbotron for a primary marketing message or call to action -->
-        <div class="jumbotron">
-            <div class="container">
-                <h1>Bilibili 屏蔽词分享平台</h1>
-                <p>这是一个可以用来分享、管理您在Bilibili设置的弹幕屏蔽词的网站</p>
-                <p>请注意：这并不是Bilibili的官方网站，与Bilibili官方无关</p>
+    <div id="main-container">
+        <% include template/header %>
+            <!-- Main jumbotron for a primary marketing message or call to action -->
+            <div class="jumbotron">
+                <div class="container">
+                    <h1>Bilibili 屏蔽词分享平台</h1>
+                    <p>这是一个可以用来分享、管理您在Bilibili设置的弹幕屏蔽词的网站</p>
+                    <p>请注意：这并不是Bilibili的官方网站，与Bilibili官方无关</p>
+                </div>
             </div>
-        </div>
 
-        <div class="container">
-            <!-- Example row of columns -->
-            <div class="row">
-                <div class="col-md-6">
+            <div class="container">
+                <!-- Example row of columns -->
+                <div class="row">
                     <h2>分享列表 <a href="submit.html" class="btn btn-success" style="float:right;margin-right:15px">提交屏蔽词包</a></h2>
 
                     <hr>
@@ -39,7 +38,8 @@
                         <thead>
                             <tr>
                                 <th>名称</th>
-                                <!--<th>票数</th>-->
+                                <th>标签</th>
+                                <th>好评</th>
                                 <th>使用量</th>
                                 <th>操作</th>
                             </tr>
@@ -47,7 +47,8 @@
                         <tbody>
                             <tr v-for="item in sharelist">
                                 <th>{{item.name}}</th>
-                                <!--<th>{{item.vote}}</th>-->
+                                <th><span v-for="tag in item.tags" class="label label-default">{{tag}}</span></th>
+                                <th>{{calcVote(item)}}</th>
                                 <th>{{item.usage}}</th>
                                 <th><a href="javascript:void(0)" v-on:click="detail(item._id)">查看</a>
                                     <!--<a :href="'upvote/'+item._id">赞</a>-->
@@ -68,7 +69,7 @@
                                 <p>名称: {{detailjson["name"]}}</p>
                                 <p>发布时间：{{getTime(detailjson["time"])}}</p>
                                 <p>使用量: {{detailjson["usage"]}}</p>
-                                <p>介绍: <span  v-if='detailjson["description"]==""'>无</span></p>
+                                <p>介绍: <span v-if='detailjson["description"]==""'>无</span></p>
                                 <pre v-if='detailjson["description"]!=""'>{{detailjson["description"]}}</pre>
                                 <p>创建者: <a :href="'https://space.bilibili.com/'+detailjson['uid']">{{detailjson["uid"]}}</a></p>
                                 <p>屏蔽词</p>
@@ -84,10 +85,18 @@
                                 </table>
                                 <p>评论：</p>
                                 <div class="comments">
-                                    <div class="comment" v-for="comment in detailjson['comments']" v-if="comment.content!=''"><a :href="'https://space.bilibili.com/'+comment.uid">{{comment.uid}}</a>: {{comment.content}}</div>
+                                    <div class="comment" v-for="comment in detailjson['comments']" v-if="comment.content!=''">
+                                        <span :class="'glyphicon glyphicon-thumbs-'+(comment.like?'up': (comment.like===false?'down':'') )" aria-hidden="true"></span> <a :href="'https://space.bilibili.com/'+comment.uid">{{comment.uid}}</a>: {{comment.content}}</div>
                                 </div>
                                 <div class="row">
-                                    <div class="col-md-10">
+                                    <div class="col-md-1" style="font-size:2em;" id="good" v-on:click="vote(1)">
+                                        <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
+                                    </div>
+                                    <div class="col-md-1" style="font-size:2em;" id="bad" v-on:click="vote(0)">
+                                        <span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
+                                    </div>
+
+                                    <div class="col-md-8">
                                         <input type="text" placeholder="评论内容" class="form-control" id="comment_content">
                                     </div>
                                     <div class="col-md-2">
@@ -104,7 +113,7 @@
                     </div>
                     <!-- /.modal -->
                 </div>
-                <div class="col-md-6">
+                <div class="row">
                     <h2>您的屏蔽列表</h2>
                     <hr>
                     <div v-if="!notLogin">
@@ -129,10 +138,10 @@
                             <div class="row">
                                 <div class="col-md-4">
                                     <select class="form-control" name="type" id="type">
-                          <option value="0">普通</option>
-                          <option value="1">正则</option>
-                          <option value="2">用户</option>
-                        </select>
+                                    <option value="0">普通</option>
+                                    <option value="1">正则</option>
+                                    <option value="2">用户</option>
+                                    </select>
                                 </div>
                                 <div class="col-md-6">
                                     <input type="text" placeholder="屏蔽内容" class="form-control" name="filter" id="filter">
@@ -154,8 +163,8 @@
             <footer>
                 <p>&copy; 2017 <a href="https://harrynull.tech">Harry Yu</a>. Licensed under MIT License. <a href="https://github.com/abc612008/bilibili_blacklist">Contribute to it</a>.</p>
             </footer>
-        </div>
-        <!-- /container -->
+    </div>
+    <!-- /container -->
     </div>
 
     <script src="js/script.js"></script>

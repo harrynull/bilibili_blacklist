@@ -30,16 +30,6 @@ export function registerApis(app: express.Application) {
             });
         });
     });
-    app.get('/upvote/:id', function (req, response) {
-        var query = { "_id": database.Database.getID(req.params.id) };
-        new database.Database(function (db) {
-            db.find("sharelist", query, function (res) {
-                db.updateOne("sharelist", query, { $inc: { "vote": 1 } }, {}, function () { db.close() });
-                //response.json({"code":0, "message":"success"});
-                response.redirect("../index.html");
-            });
-        });
-    });
     app.post('/comment', function (req, response) {
         new database.Database(function (db) {
             var closeDB = function () { db.close(); };
@@ -52,7 +42,7 @@ export function registerApis(app: express.Application) {
                 }
                 var query = { "_id": database.Database.getID(req.body["id"]) };
                 db.find("sharelist", query, function (res) {
-                    var newComment = { "uid": uid, "content": req.body["content"] };
+                    let newComment = { "uid": uid, "content": req.body["content"], "like": req.body["like"]=="1" };
                     db.updateOne("sharelist", query, { $push: { "comments": newComment } }, {}, closeDB);
                     response.json({ "code": 0, "message": "success" });
                 });
@@ -81,6 +71,7 @@ export function registerApis(app: express.Application) {
                         "time": new Date().getTime(),
                         "tags": tags,
                         "usage": 0,
+                        "safe-level": req.body["safe-level"],
                         "comments": []
                     }, function () {
                         response.redirect("index.html");
