@@ -67,6 +67,8 @@
                             </div>
                             <div class="modal-body">
                                 <p>名称: {{detailjson["name"]}}</p>
+                                <p>Tag: {{detailjson["tags"]?detailjson["tags"].join(', '):"N/A"}}</p>
+                                <p>误伤程度： {{['几乎不误伤','可能轻微误伤','可能严重误伤'][detailjson["safe-level"]]}}</p>
                                 <p>发布时间：{{getTime(detailjson["time"])}}</p>
                                 <p>使用量: {{detailjson["usage"]}}</p>
                                 <p>介绍: <span v-if='detailjson["description"]==""'>无</span></p>
