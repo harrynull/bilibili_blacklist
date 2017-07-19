@@ -121,16 +121,23 @@ export function registerApis(app: express.Application) {
     app.get('/fetch_user_sharelist', function (req, response) {
         new database.Database(function (db) {
             db.find("user_sharelist", {}, function (res) {
-                var user_blacklist: interfaces.UserBlacklist = {}
-                for (let item of res) {
-                    for (let uid of item.data) {
-                        user_blacklist[uid] = user_blacklist[uid] ? user_blacklist[uid] + 1 : 1;
+                db.find("user_sharelist", { "uid": parseInt(req.cookies.uid) }, function (r) {
+                    if (r.length == 0) {
+                        response.json({ "code": -2, "message": "Need to share first." });
+                        db.close();
+                        return;
                     }
-                }
-                var user_blacklist_arr: interfaces.UserBlacklistItem[] = []
-                for (let key in user_blacklist) user_blacklist_arr.push({ uid: key, num: user_blacklist[key] });
-                response.json(user_blacklist_arr);
-                db.close();
+                    var user_blacklist: interfaces.UserBlacklist = {}
+                    for (let item of res) {
+                        for (let uid of item.data) {
+                            user_blacklist[uid] = user_blacklist[uid] ? user_blacklist[uid] + 1 : 1;
+                        }
+                    }
+                    var user_blacklist_arr: interfaces.UserBlacklistItem[] = []
+                    for (let key in user_blacklist) user_blacklist_arr.push({ uid: key, num: user_blacklist[key] });
+                    response.json(user_blacklist_arr);
+                    db.close();
+                });
             });
         });
     });
