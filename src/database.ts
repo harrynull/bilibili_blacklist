@@ -83,6 +83,23 @@ export class Database {
     }
 
     /**
+     * Delete a specific document in a table
+     * 
+     * @param {string} tableName the name of the table 
+     * @param {object} where the filter
+     * @param {OperationCallback<mongo.UpdateWriteOpResult>} afterDoneSuccessfully callback
+     * @memberof Database
+     */
+    public deleteOne(tableName: string, where: object, afterDoneSuccessfully: OperationCallback<mongo.DeleteWriteOpResultObject>) {
+        this.db.collection(tableName).deleteOne(where, function (error, result) {
+            if (error) {
+                console.log('[Error][DB] Delete: ' + error);
+            } else if (afterDoneSuccessfully) {
+                afterDoneSuccessfully(result);
+            }
+        });
+    }
+    /**
      * 验证用户在平台的登录状态
      * 
      * @param {string} uid user's uid

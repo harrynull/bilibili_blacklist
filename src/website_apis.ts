@@ -4,6 +4,8 @@ import database = require('./database');
 import bilibili = require('./bilibili');
 import interfaces = require('./interface');
 
+const AdminUID = -1;
+
 export function registerApis(app: express.Application) {
     app.get('/fetch_sharelist', function (req, response) {
         new database.Database(function (db) {
@@ -42,7 +44,7 @@ export function registerApis(app: express.Application) {
                 }
                 var query = { "_id": database.Database.getID(req.body["id"]) };
                 db.find("sharelist", query, function (res) {
-                    let newComment = { "uid": uid, "content": req.body["content"], "like": req.body["like"]=="1" };
+                    let newComment = { "uid": uid, "content": req.body["content"], "like": req.body["like"] == "1" };
                     db.updateOne("sharelist", query, { $push: { "comments": newComment } }, {}, closeDB);
                     response.json({ "code": 0, "message": "success" });
                 });
@@ -75,7 +77,7 @@ export function registerApis(app: express.Application) {
                         "comments": []
                     }, function () {
                         response.redirect("index.html");
-                        db.updateOne("tags", { name: "tags" }, { $addToSet: { tags: {$each: tags} } }, { upsert: true }, closeDB);
+                        db.updateOne("tags", { name: "tags" }, { $addToSet: { tags: { $each: tags } } }, { upsert: true }, closeDB);
                     }
                 );
             });
@@ -147,6 +149,38 @@ export function registerApis(app: express.Application) {
             db.find("tags", { name: "tags" }, function (res) {
                 if (res) response.json(res[0].tags);
                 db.close();
+            });
+        });
+    });
+
+    app.get('/remove', function (req, response) {
+        if(parseInt(req.cookies.uid)!=AdminUID) {
+            response.json({ "code": -3, "message": "Access denied." });
+            return;
+        }
+        new database.Database(function (db) {
+            db.find("users", { "uid": parseInt(req.cookies.uid), "token": req.cookies.token }, function (r) {
+                if (r.length == 0) {
+                    response.json({ "code": -3, "message": "Access denied." });
+                    db.close();
+                    return;
+                }
+                if(!req.query["id"]){
+                    db.find("sharelist", {}, function (res) {
+                        var ret = "<style>body{font-family:monospace;}</style><ul>";
+                        for(let item of res){
+                            ret+="<li>"+item._id+": "+item.name+" <a href='remove?id="+item._id+"'>Remove</a></li>"
+                        }
+                        ret+="</ul>"
+                        response.send(ret);
+                        db.close();
+                    });
+                    return;
+                }
+                db.deleteOne("sharelist", {_id: database.Database.getID(req.query["id"])},function(r){
+                    response.redirect("remove");
+                    db.close();
+                });
             });
         });
     });
