@@ -26,8 +26,10 @@ Bilibili的弹幕环境是众所周知的不尽人意，而其自带的弹幕屏
 从已有网站导入分享数据：
 
 ​	GET /fetch_sharelist 即可获得sharelist数据库的内容。
+   GET /tags 即可获得tags。
 
 ​	例如：http://harrynull.tech/bilibili/fetch_sharelist。
+
 
 ## 使用
 
@@ -45,13 +47,22 @@ Bilibili的弹幕环境是众所周知的不尽人意，而其自带的弹幕屏
 
 ## 更新
 
-更新内容 (2017/7/14)：
-
 C = Change
 I = Improve & Optimize
 R = Remove
 N = New
 F = Fix
+
+更新内容 (2017/7/23):
+1. [I] 改进了UI
+2. [N] 管理员删除后台
+3. [F] issue #1
+4. [N] 屏蔽词误伤安全级别
+5. [N] 投票系统
+6. [N] Tags
+7. [N] 筛选&排序
+
+更新内容 (2017/7/14)：
 
 1. [R] 制作屏蔽列表中移除了『用户』选项，同时移除已有屏蔽列表中的『用户』屏蔽项。
 2. [F] 屏蔽列表不允许重复，同时移除已有屏蔽列表中的重复项。
