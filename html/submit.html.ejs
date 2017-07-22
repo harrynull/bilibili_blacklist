@@ -5,38 +5,43 @@
     <title>Bilibili 屏蔽词分享平台 | 提交屏蔽词</title>
 
     <% include template/head %>
-    <style>
-        body {
-            margin: 5% 0;
-            padding: 0 20%;
-            overflow-x: hidden;
-        }
-
-        label {
-            padding-bottom: 10px;
-        }
-
-        textarea {
-            width: 500px;
-            height: 200px;
-        }
-
-        .sumbit_form {
-            width: 60%;
-        }
-
-        @media screen and (max-width:800px) {
+        <style>
             body {
                 margin: 5% 0;
-                padding: 0 5%;
+                padding: 0 20%;
                 overflow-x: hidden;
             }
-            .sumbit_form {
-                width: 90%;
-            }
-        }
-    </style>
 
+            label {
+                padding-bottom: 10px;
+            }
+
+            textarea {
+                width: 500px;
+                height: 200px;
+            }
+
+            .sumbit_form {
+                width: 60%;
+            }
+
+            .token a {
+                color: #777;
+            }
+
+            @media screen and (max-width:800px) {
+                body {
+                    margin: 5% 0;
+                    padding: 0 5%;
+                    overflow-x: hidden;
+                }
+                .sumbit_form {
+                    width: 90%;
+                }
+            }
+        </style>
+        <link href="css/bootstrap-tokenfield.min.css" rel="stylesheet">
+        <link href="css/jquery-ui.min.css" rel="stylesheet">
 </head>
 
 <body>
@@ -46,7 +51,7 @@
             <p style="color:#888">提示：请避免将不同类型的屏蔽词放入一个屏蔽词包。</p>
             <div class="form-group">
                 <label class="control-label">名称</label>
-                <input type="text" placeholder="给您提交的屏蔽词包起个名字" class="input-xlarge form-control" name="name" required>
+                <input type="text" placeholder="给您提交的屏蔽词包起个名字" class="input-xlarge form-control" name="name">
             </div>
 
             <div class="form-group">
@@ -100,7 +105,18 @@
                 <br>
                 <p style="color: orange" id="warning"></p>
             </div>
-
+            <div class="form-group">
+                <label class="control-label">误伤程度</label>
+                <select class="form-control" name="safe-level" id="safe-level">
+                    <option value="0">几乎不误伤</option>
+                    <option value="1">可能轻微误伤</option>
+                    <option value="2">可能严重误伤</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="control-label">标签</label> 给您的屏蔽列表添加相关联的标签，如可能相联的分区、up主、视频类型。
+                <input type="text" class="form-control" id="tags" name="tags" />
+            </div>
             <div class="form-group">
                 <p style="font-size:small">注：除非您另行指定协议，您同意将您的屏蔽词包以 <a href="https://creativecommons.org/publicdomain/zero/1.0/deed.zh">Creative Commons 0</a>                    协议释放到公共领域。</p>
                 <button class="btn btn-success">提交</button>
@@ -112,65 +128,93 @@
 
     <% include template/foot %>
 
-    <script>
-        var app = new Vue({
-            el: '.sumbit_form',
-            data: {
-                filters: [],
-                my_filter: [],
-                str_filters: ""
-            },
-            methods: {
-                addToList: function (filter) {
-                    for(let item of this.filters){
-                        if(item.filter == filter.filter){
-                            $("#warning").text("该屏蔽词已存在!");
-                            return
+        <script src="js/bootstrap-tokenfield.min.js"></script>
+        <script src="js/jquery-ui.min.js"></script>
+        <script>
+            var app = new Vue({
+                el: '.sumbit_form',
+                data: {
+                    filters: [],
+                    my_filter: [],
+                    str_filters: ""
+                },
+                methods: {
+                    addToList: function (filter) {
+                        for (let item of this.filters) {
+                            if (item.filter == filter.filter) {
+                                $("#warning").text("该屏蔽词已存在!");
+                                return
+                            }
                         }
-                    }
-                    this.filters.push({ "type": filter.type, "filter": filter.filter });
-                    this.str_filters = JSON.stringify(this.filters);
-                },
-                removeFromList: function (filter) {
-                    this.filters = this.filters.filter(function(item) { return item !== filter });
-                    this.str_filters = JSON.stringify(this.filters);
-                },
-                addAll: function(){
-                    for(let filter of this.my_filter){
-                        if(filter.type==2) continue
+                        this.filters.push({
+                            "type": filter.type,
+                            "filter": filter.filter
+                        });
+                        this.str_filters = JSON.stringify(this.filters);
+                    },
+                    removeFromList: function (filter) {
+                        this.filters = this.filters.filter(function (item) {
+                            return item !== filter
+                        });
+                        this.str_filters = JSON.stringify(this.filters);
+                    },
+                    addAll: function () {
+                        for (let filter of this.my_filter) {
+                            if (filter.type == 2) continue
+                            this.addToList(filter);
+                        }
+                        $("#warning").text("");
+                    },
+                    removeAll: function () {
+                        this.filters = [];
+                        this.str_filters = "[]";
+                    },
+                    addToListFromTextbox: function () {
+                        $("#warning").text("");
+                        let filter = {
+                            "type": $("#select-type").val(),
+                            "filter": $("#content").val()
+                        };
                         this.addToList(filter);
+                        $("#content").val("");
                     }
-                    $("#warning").text("");
                 },
-                removeAll: function(){
-                    this.filters = [];
-                    this.str_filters = "[]";
-                },
-                addToListFromTextbox: function () {
-                    $("#warning").text("");
-                    let filter = { "type": $("#select-type").val(), "filter": $("#content").val() };
-                    this.addToList(filter);
-                    $("#content").val("");
+                mounted: function () {
+                    this.$http.get('fetch_blacklist').then(response => {
+                        if (response.body.code != undefined) {
+                            console.log("Failed to fetch blacklist: " + response.body.code);
+                            return;
+                        }
+                        this.my_filter = response.body;
+                    }, response => {
+                        console.log("Failed to fetch blacklist")
+                    });
+                    this.$http.get('tags').then(response => {
+                        $('#tags').tokenfield({
+                            autocomplete: {
+                                source: response.body,
+                                delay: 100
+                            },
+                            showAutocompleteOnFocus: true
+                        });
+                    }, response => {
+                        console.log("Failed to fetch tag")
+                    });
                 }
-            },
-            mounted: function () {
-                this.$http.get('fetch_blacklist').then(response => {
-                    if (response.body.code != undefined) {
-                        console.log("Failed to fetch blacklist: " + response.body.code);
-                        return;
-                    }
-                    this.my_filter = response.body;
-                }, response => {
-                    console.log("Failed to fetch blacklist")
-                });
+            });
+            if (document.cookie.indexOf("token=") == -1) window.location.href = "login.html";
+            var check = function () {
+                if ($("#name").val() == "") {
+                    alert("名称不能为空");
+                    return false;
+                }
+                if ($("#filters").val() == "") {
+                    alert("您需要添加至少一个屏蔽词");
+                    return false;
+                }
+                return true;
             }
-        });
-        if (document.cookie.indexOf("token=") == -1) window.location.href = "login.html";
-        var check = function () {
-            if ($("#filters").val() == "") { alert("您需要添加至少一个屏蔽词"); return false; }
-            return true;
-        }
-    </script>
+        </script>
 </body>
 
 </html>

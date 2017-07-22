@@ -118,11 +118,11 @@
                 },
                 getLoginInfo: function () {
                     this.$http.post('login/getinfo', { "oauthkey": this.oauthkey }).then(response => {
-                        if (response.body == -4) {
-                            this.status = "验证失败";
+                        if (response.body < 0) {
+                            this.status = "验证失败。"
+                            if(navigator.userAgent.search("Firefox")>-1) this.status+="注：目前对火狐浏览器存在已知的兼容性问题，请换用其它浏览器或使用手机bilibili客户端扫描二维码。";
                             return;
                         }
-                        console.log(response.bo)
                         results = new RegExp(/DedeUserID=(\d*?)&.*ckMd5=(.*?)&.*SESSDATA=(.*?)&/g).exec(response.body.url)
                         this.status = "验证成功!";
                         $("#uid").val(results[1]);

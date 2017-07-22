@@ -17,9 +17,14 @@
     <div id="main-container">
         <% include template/header %>
         <div class="container">
-            <form action="share_user_blacklist" method="POST">
-                <input type="submit" value="上传我的屏蔽列表" class="btn btn-primary btn-block" />
-            </form>
+            <div v-if="share_first">
+                <form action="share_user_blacklist" method="POST">
+                    <input type="submit" value="上传我的屏蔽列表" class="btn btn-primary btn-block" />
+                </form>
+                <br>
+                很抱歉，为了避免先屏蔽再上传导致的<a href="https://github.com/abc612008/bilibili_blacklist/issues/1">屏蔽用户的马太效应</a>，只有上传了屏蔽列表的人才能查看用户屏蔽列表。
+            </div>
+            <div v-if="!share_first">
             <div style="margin: 30px 0">
                 批量屏蔽被屏蔽人数达到
                 <input type="text" style="width: 3em" id="num" />及以上的用户
@@ -42,7 +47,7 @@
                     </tr>
                 </tbody>
             </table>
-
+            </div>
         </div>
         <!-- /container -->
     </div>
@@ -56,6 +61,7 @@
                 notLogin: document.cookie.indexOf('bilibili_cookies=') == -1,
                 apply_status: {},
                 tip: document.cookie.indexOf('tip=') != -1,
+                share_first: false,
                 uid: function () {
                     var arr, reg = new RegExp("(^| )uid=([^;]*)(;|$)");
                     if (arr = document.cookie.match(reg))
@@ -107,6 +113,10 @@
                 try { this.apply_status = JSON.parse(sessionStorage.apply_status); }
                 catch (ex) { this.apply_status = {}; }
                 this.$http.get('fetch_user_sharelist').then(response => {
+                    if(response.body.code==-2){ // 要先分享才能查看用户屏蔽列表
+                        this.share_first=true;
+                        return;
+                    }
                     this.user_sharelist = response.body.sort(function (x, y) { return x.num < y.num ? 1 : -1; });
                 }, response => {
                     console.log("Failed to fetch user sharelist");
