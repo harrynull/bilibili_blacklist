@@ -9,11 +9,25 @@
                 padding-top: 50px;
                 padding-bottom: 20px;
             }
-
             .comment {
                 margin: 20px;
             }
-        </style>
+            .container{
+                padding: 0 10%;
+            }
+            .item{
+                padding: 30px 5px;
+                border-bottom:1px solid #777;
+            }
+            .item:hover{
+                background-color:#EEE;
+            }
+            .token a {
+                color: #777;
+            }
+</style>
+        <link href="css/bootstrap-tokenfield.min.css" rel="stylesheet">
+        <link href="css/jquery-ui.min.css" rel="stylesheet">
 </head>
 
 <body>
@@ -34,29 +48,21 @@
                     <h2>分享列表 <a href="submit.html" class="btn btn-success" style="float:right;margin-right:15px">提交屏蔽词包</a></h2>
 
                     <hr>
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>名称</th>
-                                <th>标签</th>
-                                <th>好评</th>
-                                <th>使用量</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="item in sharelist">
-                                <th>{{item.name}}</th>
-                                <th><span v-for="tag in item.tags" class="label label-default">{{tag}}</span></th>
-                                <th>{{calcVote(item)}}</th>
-                                <th>{{item.usage}}</th>
-                                <th><a href="javascript:void(0)" v-on:click="detail(item._id)">查看</a>
-                                    <!--<a :href="'upvote/'+item._id">赞</a>-->
-                                    <a href="javascript:void(0)" v-on:click="apply(item._id)" v-if="apply_status[item._id]==undefined">应用</a>
-                                    <span v-if="apply_status[item._id]==true">已加</span></th>
-                            </tr>
-                        </tbody>
-                    </table>
+                    按标签筛选： <div style="display:inline-block;"><input type="text" class="form-control" id="tags" style="width:20em;" /></div>
+                    排序：<div class="btn-group" role="group" aria-label="...">
+                        <button type="button" :class="'btn btn-'+(sortBy==0?'primary':'default')" v-on:click="sortByUsage()">使用量</button>
+                        <button type="button" :class="'btn btn-'+(sortBy==1?'primary':'default')" v-on:click="sortByRate()">好评量</button>
+                        <button type="button" :class="'btn btn-'+(sortBy==2?'primary':'default')" v-on:click="sortByDate()">发布时间</button>
+                    </div>
+
+                    <div v-for="item in sharelist" class="item" v-if="item.filters[0]" v-on:click="detail(item._id)">
+                        <p><a href="javascript:void(0)" v-on:click="detail(item._id)">{{item.name}}</a> <span style="margin-left:1em"></span><span v-for="tag in item.tags" class="label label-default" style="margin:0 2px">{{tag}}</span></p>
+                        <p><span class="glyphicon glyphicon-star" aria-hidden="true"></span> {{calcVoteDisplay(item)}} | {{item.usage}} 次使用 | {{['几乎不误伤','可能轻微误伤','可能严重误伤'][item['safe-level']]}}</p>
+                        <p>{{detailjson["description"]}}</p>
+                        <p>{{filters_preview(item.filters)}}</p>
+                        <a href="javascript:void(0)" v-on:click="detail(item._id)" class="btn btn-default btn-sm" style="width:6em;margin-right:1em;">查看</a>
+                        <a href="javascript:void(0)" v-on:click="apply(item._id)" class="btn btn-primary btn-sm" :disabled="apply_status[item._id]"  style="width:6em;">应用</a></th>
+                    </div>
                 </div>
                 <div class="modal fade" id="detail_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
                     <div class="modal-dialog">
@@ -88,7 +94,7 @@
                                 <p>评论：</p>
                                 <div class="comments">
                                     <div class="comment" v-for="comment in detailjson['comments']" v-if="comment.content!=''">
-                                        <span :class="'glyphicon glyphicon-thumbs-'+(comment.like?'up': (comment.like===false?'down':'') )" aria-hidden="true"></span> <a :href="'https://space.bilibili.com/'+comment.uid">{{comment.uid}}</a>: {{comment.content}}</div>
+                                        <span :class="'glyphicon glyphicon-thumbs-'+(comment.like?'up': (comment.like===false?'down':'') )" aria-hidden="true"></span>                                        <a :href="'https://space.bilibili.com/'+comment.uid">{{comment.uid}}</a>: {{comment.content}}</div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-1" style="font-size:2em;" id="good" v-on:click="vote(1)">
@@ -171,6 +177,8 @@
 
     <script src="js/script.js"></script>
     <% include template/foot %>
+    <script src="js/bootstrap-tokenfield.min.js"></script>
+    <script src="js/jquery-ui.min.js"></script>
 </body>
 
 </html>
