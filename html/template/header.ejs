@@ -12,10 +12,11 @@
         </div>
         <div id="navbar" class="navbar-collapse collapse">
             <div class="navbar-form navbar-right">
-                <a href="login.html" class="btn btn-success" v-if="notLogin">登录</a>
-                <p v-if="!notLogin" style="padding-top:11.5px;color:#FFF;float:right"> UID {{uid}}</p>
-                <a href="user.html" class="btn btn-success" style="float:right; margin-right:5px;">用户屏蔽</a>
-
+                <div class="row">
+                <a href="login.html" style="color:#FFF;float:right;" v-if="notLogin">登录</a>
+                <p v-if="!notLogin" style="color:#FFF;float:right"> UID {{uid}}</p>
+                <a href="user.html" style="color:#FFF;float:right; margin-right:15px;">用户屏蔽</a>
+                </div>
             </div>
         </div>
         <!--/.navbar-collapse -->

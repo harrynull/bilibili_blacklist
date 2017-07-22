@@ -110,6 +110,7 @@
                 }
             },
             mounted: function () {
+                if (this.notLogin) window.location.href = "login.html";
                 try { this.apply_status = JSON.parse(sessionStorage.apply_status); }
                 catch (ex) { this.apply_status = {}; }
                 this.$http.get('fetch_user_sharelist').then(response => {
