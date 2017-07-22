@@ -147,7 +147,8 @@ export function registerApis(app: express.Application) {
     app.get('/tags', function (req, response) {
         new database.Database(function (db) {
             db.find("tags", { name: "tags" }, function (res) {
-                if (res) response.json(res[0].tags);
+                if (res[0]) response.json(res[0].tags);
+                else response.json([]);
                 db.close();
             });
         });
