@@ -42,6 +42,9 @@
             margin: 5px 0;
             width: 100%;
         }
+        .form-control{
+            color:#FFF;   
+        }
     </style>
 
 </head>
@@ -89,9 +92,9 @@
         <div class="login">
             <p>通过Cookie手动登录</p>
             <form action="login/cookies" method="post" id="cookie_login">
-                <input type="text" id="uid" name="DedeUserID" placeholder="DedeUserID" required/>
-                <input type="password" id="ckmd5" name="DedeUserID__ckMd5" placeholder="DedeUserID__ckMd5" required/>
-                <input type="password" id="sessdata" name="SESSDATA" placeholder="SESSDATA" required/>
+                <input type="text" id="uid" name="DedeUserID" placeholder="DedeUserID" class="form-control" required/>
+                <input type="password" id="ckmd5" name="DedeUserID__ckMd5" placeholder="DedeUserID__ckMd5" class="form-control" required/>
+                <input type="password" id="sessdata" name="SESSDATA" placeholder="SESSDATA" class="form-control" required/>
                 <input type="submit" value="登录" class="btn btn-primary btn-block" />
             </form>
         </div>

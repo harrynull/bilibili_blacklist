@@ -55,7 +55,7 @@
                         <button type="button" :class="'btn btn-'+(sortBy==2?'primary':'default')" v-on:click="sortByDate()">发布时间</button>
                     </div>
 
-                    <div v-for="item in sharelist" class="item" v-if="item.filters[0]" v-on:click="detail(item._id)">
+                    <div v-for="item in sharelist" class="item" v-if="item.filters[0]">
                         <p><a href="javascript:void(0)" v-on:click="detail(item._id)">{{item.name}}</a> <span style="margin-left:1em"></span><span v-for="tag in item.tags" class="label label-default" style="margin:0 2px">{{tag}}</span></p>
                         <p><span class="glyphicon glyphicon-star" aria-hidden="true"></span> {{calcVoteDisplay(item)}} | {{item.usage}} 次使用 | {{['几乎不误伤','可能轻微误伤','可能严重误伤'][item['safe-level']]}}</p>
                         <p>{{detailjson["description"]}}</p>
@@ -177,8 +177,8 @@
 
     <script src="js/script.js"></script>
     <% include template/foot %>
-    <script src="js/bootstrap-tokenfield.min.js"></script>
     <script src="js/jquery-ui.min.js"></script>
+    <script src="js/bootstrap-tokenfield.min.js"></script>
 </body>
 
 </html>
