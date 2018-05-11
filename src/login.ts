@@ -59,7 +59,7 @@ function getLoginInfo(oauthkey: string, callback: (status: number | object) => v
 export function registerApis(app: express.Application) {
     app.post('/login/cookies', function (request, response) {
         let uid = request.body["DedeUserID"];
-        let cookie = "DedeUserID=" + uid + "; DedeUserID__ckMd5=" + request.body["DedeUserID__ckMd5"] + "; SESSDATA=" + request.body["SESSDATA"];
+        let cookie = "DedeUserID=" + uid + "; DedeUserID__ckMd5=" + request.body["DedeUserID__ckMd5"] + "; SESSDATA=" + request.body["SESSDATA"] + "; bili_jct=" + request.body["bili_jct"];
         bilibili.fetchBlacklist(cookie,
             function (suc, result) {
                 if (suc) {
@@ -67,6 +67,7 @@ export function registerApis(app: express.Application) {
                     response.cookie("token", token);
                     response.cookie("uid", uid);
                     response.cookie("bilibili_cookies", cookie);
+                    response.cookie("csrf", request.body["bili_jct"]);
                     response.redirect("../index.html");
                     storeToken(uid, token);
                 } else {

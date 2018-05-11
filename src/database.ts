@@ -1,12 +1,13 @@
 import mongo = require('mongodb');
-let DatabaseAddress = 'mongodb://localhost:27017/bilibili_blacklist';
+let DatabaseAddress = 'mongodb://localhost:27017/';
 
 type DatabaseCallback = ((database: Database) => void);
 type OperationCallback<T> = ((result: T) => void) | null;
 
 export class Database {
 
-    private db: mongo.Db;
+    private client!: mongo.MongoClient;
+    private db!: mongo.Db;
 
     /**
      * Creates an instance of Database and automatically connects to the server.
@@ -15,8 +16,9 @@ export class Database {
      */
     public constructor(afterDoneSuccessfully: DatabaseCallback) {
         let _this = this;
-        mongo.MongoClient.connect(DatabaseAddress, function (error, db) {
-            _this.db = db;
+        mongo.MongoClient.connect(DatabaseAddress, function (error, client) {
+            _this.client = client;
+            _this.db = client.db("bilibili_blacklist");
             if (error != null) {
                 console.log('[Error][DB] Connect: ' + error);
             } else if (afterDoneSuccessfully) {
@@ -120,7 +122,7 @@ export class Database {
      * @memberof Database
      */
     public close() {
-        this.db.close();
+        this.client.close();
     }
 
     /**

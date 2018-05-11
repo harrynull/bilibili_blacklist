@@ -25,7 +25,7 @@ export function registerApis(app: express.Application) {
                     return;
                 }
                 for (var id in res[0]["filters"]) {
-                    bilibili.addFilter(req.cookies.bilibili_cookies, res[0]["filters"][id].type, res[0]["filters"][id].filter, null);
+                    bilibili.addFilter(req.cookies.bilibili_cookies, req.cookies.csrf, res[0]["filters"][id].type, res[0]["filters"][id].filter, null);
                 }
                 db.updateOne("sharelist", query, { $inc: { "usage": 1 } }, {}, function () { db.close() });
                 response.json({ "code": 0, "message": "success" });
@@ -86,7 +86,7 @@ export function registerApis(app: express.Application) {
 
     app.post('/del_item', function (req, response) {
         bilibili.jsonCallPost('https://api.bilibili.com/x/dm/filter/user/del', req.cookies.bilibili_cookies,
-            { "ids": req.body["ids"], "jsonp": "jsonp", "csrf": "" },
+            { "ids": req.body["ids"], "jsonp": "jsonp", "csrf": req.cookies.csrf },
             function (res) {
                 response.json(res);
             },
