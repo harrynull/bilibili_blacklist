@@ -145,7 +145,7 @@ var app = new Vue({
       //for(var i=1;i<n;i++){
       //  ret+=", "+filters[i].filter;
       //}
-      var n = 0;
+      var n = 1;
       while (ret.length < 50 && n < filters.length)
         ret += ", " + filters[n++].filter;
 
