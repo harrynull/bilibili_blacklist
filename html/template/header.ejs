@@ -13,9 +13,9 @@
         <div id="navbar" class="navbar-collapse collapse">
             <div class="navbar-form navbar-right">
                 <div class="row">
-                <a href="login.html" style="color:#FFF;float:right;" v-if="notLogin">登录</a>
-                <p v-if="!notLogin" style="color:#FFF;float:right"> UID {{uid}}</p>
-                <a href="user.html" style="color:#FFF;float:right; margin-right:15px;">用户屏蔽</a>
+                <a v-if="notLogin" href="login.html" style="color:#FFF;float:right; padding-top:6px;">登录</a>
+                <p v-if="!notLogin" style="color:#FFF;float:right; padding-top:6px;"> UID {{uid}}</p>
+                <a href="user.html" style="color:#FFF;float:right; margin-right:15px; padding-top:6px;">用户屏蔽</a>
                 </div>
             </div>
         </div>
