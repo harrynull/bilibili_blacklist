@@ -70,7 +70,7 @@
                             </div>
                             <div class="modal-body">
                                 <img src="https://static-s.bilibili.com/passport/img/qr-tips.png" alt="提示" />
-                                <p style="color:#000;margin:20px;">打开手机Bilibili客户端，点开搜索，在搜索栏左边有扫描二维码。</p>
+                                <p style="color:#000;margin:20px;">打开手机Bilibili客户端，左侧栏的右上角可以扫描二维码。</p>
                                 <div id="qrcode"></div>
                             </div>
                             <div class="modal-footer">
@@ -95,6 +95,7 @@
                 <input type="text" id="uid" name="DedeUserID" placeholder="DedeUserID" class="form-control" required/>
                 <input type="password" id="ckmd5" name="DedeUserID__ckMd5" placeholder="DedeUserID__ckMd5" class="form-control" required/>
                 <input type="password" id="sessdata" name="SESSDATA" placeholder="SESSDATA" class="form-control" required/>
+                <input type="password" id="bili_jct" name="bili_jct" placeholder="bili_jct" class="form-control" required/>
                 <input type="submit" value="登录" class="btn btn-primary btn-block" />
             </form>
         </div>
@@ -126,11 +127,12 @@
                             if(navigator.userAgent.search("Firefox")>-1) this.status+="注：目前对火狐浏览器存在已知的兼容性问题，请换用其它浏览器或使用手机bilibili客户端扫描二维码。";
                             return;
                         }
-                        results = new RegExp(/DedeUserID=(\d*?)&.*ckMd5=(.*?)&.*SESSDATA=(.*?)&/g).exec(response.body.url)
+                        results = new RegExp(/DedeUserID=(\d*?)&.*ckMd5=(.*?)&.*SESSDATA=(.*?)&.*bili_jct=(.*?)&/g).exec(response.body.url)
                         this.status = "验证成功!";
                         $("#uid").val(results[1]);
                         $("#ckmd5").val(results[2]);
                         $("#sessdata").val(results[3]);
+                        $("#bili_jct").val(results[4]);
                         $("#cookie_login").submit();
                     }, response => {
                         console.log("Failed to get login info");
