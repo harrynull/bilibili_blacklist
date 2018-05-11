@@ -2,9 +2,9 @@
 
 ![ss.png](https://ooo.0o0.ooo/2017/06/05/5934b6ae6e005.png)
 
-[![Travis branch](https://img.shields.io/travis/abc612008/bilibili_blacklist/master.svg)](https://travis-ci.org/abc612008/bilibili_blacklist)
-[![dependencies](https://david-dm.org/abc612008/bilibili_blacklist.svg)](https://david-dm.org/abc612008/bilibili_blacklist)
-[![license](https://img.shields.io/github/license/abc612008/bilibili_blacklist.svg)](https://github.com/abc612008/bilibili_blacklist/blob/master/LICENSE)
+[![Travis branch](https://img.shields.io/travis/harrynull/bilibili_blacklist/master.svg)](https://travis-ci.org/harrynull/bilibili_blacklist)
+[![dependencies](https://david-dm.org/harrynull/bilibili_blacklist.svg)](https://david-dm.org/harrynull/bilibili_blacklist)
+[![license](https://img.shields.io/github/license/harrynull/bilibili_blacklist.svg)](https://github.com/harrynull/bilibili_blacklist/blob/master/LICENSE)
 
 这是一个可以用来分享、管理您在Bilibili设置的弹幕屏蔽词的网站。
 
@@ -39,11 +39,11 @@ Bilibili的弹幕环境是众所周知的不尽人意，而其自带的弹幕屏
 
 ## 原理
 
-原理详见[Wiki](https://github.com/abc612008/bilibili_blacklist/wiki)。
+原理详见[Wiki](https://github.com/harrynull/bilibili_blacklist/wiki)。
 
 ## 建议和BUG
 
-欢迎[提出issue](https://github.com/abc612008/bilibili_blacklist/issues)。
+欢迎[提出issue](https://github.com/harrynull/bilibili_blacklist/issues)。
 
 ## 更新
 
@@ -76,7 +76,7 @@ F = Fix
 
 ## 许可证
 
-[MIT License](https://github.com/abc612008/bilibili_blacklist/blob/master/LICENSE).
+[MIT License](https://github.com/harrynull/bilibili_blacklist/blob/master/LICENSE).
 
     MIT License
 
