@@ -2,7 +2,6 @@ var app = new Vue({
   el: '#main-container',
   data: {
     blacklist: [],
-    raw_sharelist: [],
     sharelist: [],
     notLogin: document.cookie.indexOf('bilibili_cookies=') == -1,
     uid: function () {
@@ -17,7 +16,8 @@ var app = new Vue({
     apply_status: {},
     vote_choice: -1,
     tip: document.cookie.indexOf('tip=') != -1,
-    sortBy: 0, //0 for usage, 1 for rate
+    sortBy: 'usage',
+    page: 0,
   },
   methods: {
     refreshBlacklist: function () {
@@ -60,7 +60,7 @@ var app = new Vue({
     },
     detail: function (id) {
       this.vote_choice = -1;
-      for (let item of this.sharelist) {
+      for (let item of this.sharelist.data) {
         if (item._id == id) {
           this.detailid = id;
           this.detailjson = item;
@@ -127,7 +127,7 @@ var app = new Vue({
       var like = vote[0];
       var dislike = vote[1];
       if (like + dislike == 0) return "N/A";
-      return like / (like + dislike) * 100 + "% (" + like + "/" + (like + dislike) + ")";
+      return Math.round(like / (like + dislike) * 100) + "% (" + like + "/" + (like + dislike) + ")";
     },
     vote: function (choice) { //choice: 1-like, 0-dislike
       if (choice == 1) {
@@ -154,41 +154,31 @@ var app = new Vue({
       return ret;
     },
     refreshList: function () {
-      var filterTags = $("#tags").val().split(", ");
-      if (filterTags.length>0&&filterTags[0]!="") {
-        this.sharelist=this.sharelist.filter(function(item) {
-          if (!item.tags) return false;
-          for (var tag of filterTags) {
-            if (item.tags.indexOf(tag)==-1) {
-              return false
-            }
-          }
-          return true;
-        });
-      } else {
-        this.sharelist=this.raw_sharelist;
-      }
-      var _this=this;
-      this.sharelist = this.sharelist.sort(function (x, y) {
-        if (_this.sortBy == 0) //sort by usage
-          return x.usage < y.usage ? 1 : -1;
-        else if(_this.sortBy==1) //sort by vote
-          return _this.calcVote(x)[0] < _this.calcVote(y)[0] ? 1 : -1;
-        else // sort by date
-          return x.time < y.time ? 1 : -1;        
-      })
+      this.$http.get('sharelist',{params: {page: this.page, filter: document.getElementById('tags').value.replace(", ", ","), sort: this.sortBy, dir: 'desc'}}).then(response => {
+        this.sharelist = response.body;
+      }, response => {
+        console.log("Failed to fetch sharelist");
+      });
     },
     sortByUsage: function () {
-      this.sortBy = 0;
-      this.refreshList();
-    },
-    sortByRate: function () {
-      this.sortBy = 1;
+      this.sortBy = 'usage';
       this.refreshList();
     },
     sortByDate: function(){
-      this.sortBy = 2;
+      this.sortBy = 'time';
       this.refreshList();
+    },
+    goto_page: function(i){
+      this.page = i;
+      this.sharelist.data = [];
+      this.refreshList();
+    },
+    pagination_pages: function() {
+      var start = Math.max(1, this.page - 5);
+      var stop = Math.min(start + 10, this.sharelist.last_page);
+      var a=[start], b=start;
+      while(b<stop){b++;a.push(b)}
+      return a;
     }
   },
   mounted: function () {
@@ -198,12 +188,7 @@ var app = new Vue({
     } catch (ex) {
       this.apply_status = {};
     }
-    this.$http.get('fetch_sharelist').then(response => {
-      this.raw_sharelist = response.body;
-      this.refreshList();
-    }, response => {
-      console.log("Failed to fetch sharelist");
-    });
+    this.refreshList();
     this.$http.get('tags').then(response => {
       var _this=this;
       $('#tags').tokenfield({
@@ -213,7 +198,7 @@ var app = new Vue({
           },
           showAutocompleteOnFocus: true
         });
-      $('#tags').change(function(){_this.refreshList();});
+      $('#tags').change(function(){_this.page=0;_this.refreshList();});
     }, response => {
       console.log("Failed to fetch tag")
     });

@@ -6,7 +6,6 @@
     <% include template/head %>
         <style>
             body {
-                padding-top: 50px;
                 padding-bottom: 20px;
             }
             .comment {
@@ -25,15 +24,17 @@
             .token a {
                 color: #777;
             }
-</style>
+            .sharelist_item{padding:2em;}
+            h2{font-size:2em;}
+        </style>
         <link href="https://cdn.bootcss.com/bootstrap-tokenfield/0.12.0/css/bootstrap-tokenfield.min.css" rel="stylesheet">
         <link href="https://cdn.bootcss.com/jqueryui/1.12.1/jquery-ui.min.css" rel="stylesheet">
+
 </head>
 
 <body>
     <div id="main-container">
         <% include template/header %>
-            <!-- Main jumbotron for a primary marketing message or call to action -->
             <div class="jumbotron">
                 <div class="container">
                     <h1>Bilibili 屏蔽词分享平台</h1>
@@ -43,30 +44,43 @@
             </div>
 
             <div class="container">
-                <!-- Example row of columns -->
-                <div class="row">
-                    <h2>分享列表 <a href="submit.html" class="btn btn-success" style="float:right;margin-right:15px">提交屏蔽词包</a></h2>
-
-                    <hr>
-                    按标签筛选： <div style="display:inline-block;"><input type="text" class="form-control" id="tags" style="width:20em;" /></div>
-                    排序：<div class="btn-group" role="group" aria-label="...">
-                        <button type="button" :class="'btn btn-'+(sortBy==0?'primary':'default')" v-on:click="sortByUsage()">使用量</button>
-                        <button type="button" :class="'btn btn-'+(sortBy==1?'primary':'default')" v-on:click="sortByRate()">好评量</button>
-                        <button type="button" :class="'btn btn-'+(sortBy==2?'primary':'default')" v-on:click="sortByDate()">发布时间</button>
+                <h2>分享列表 <a href="submit.html" class="btn btn-success" style="float:right;margin-right:15px">提交屏蔽词包</a></h2>
+                <hr>
+                按标签筛选： <div style="display:inline-block;"><input type="text" class="form-control" id="tags" style="width:20em;"/></div>
+                排序：<div class="btn-group" role="group" aria-label="...">
+                    <button type="button" :class="'btn btn-'+(sortBy=='usage'?'primary':'default')" v-on:click="sortByUsage()">使用量</button>
+                    <button type="button" :class="'btn btn-'+(sortBy=='time'?'primary':'default')" v-on:click="sortByDate()">发布时间</button>
                     </div>
 
-                    <div v-for="item in sharelist" class="item" v-if="item.filters[0]">
+                <ul class="list-group" style="margin-top:2em" id="sharelist">
+                    <li v-for="item in sharelist.data" class="list-group-item sharelist_item" v-if="item.filters[0]">
                         <p><a href="javascript:void(0)" v-on:click="detail(item._id)">{{item.name}}</a> <span style="margin-left:1em"></span><span v-for="tag in item.tags" class="label label-default" style="margin:0 2px">{{tag}}</span></p>
-                        <p><span class="glyphicon glyphicon-star" aria-hidden="true"></span> {{calcVoteDisplay(item)}} | {{item.usage}} 次使用 | {{['几乎不误伤','可能轻微误伤','可能严重误伤'][item['safe-level']]}}</p>
-                        <p>{{detailjson["description"]}}</p>
-                        <p>{{filters_preview(item.filters)}}</p>
-                        <a href="javascript:void(0)" v-on:click="detail(item._id)" class="btn btn-default btn-sm" style="width:6em;margin-right:1em;">查看</a>
-                        <a href="javascript:void(0)" v-on:click="apply(item._id)" class="btn btn-primary btn-sm" :disabled="apply_status[item._id]"  style="width:6em;">应用</a></th>
-                    </div>
-                </div>
+                        <p><span class="glyphicon glyphicon-star" aria-hidden="true"></span> {{calcVoteDisplay(item)}} | {{item.usage}} 次使用 {{['| 几乎不误伤','| 可能轻微误伤','| 可能严重误伤'][item['safe-level']]}}</p>
+                        <p>{{item.description}}</p>
+                        <p style="color:#aaa">{{filters_preview(item.filters)}}</p>
+                        <a href="javascript:void(0)" v-on:click="detail(item._id)" class="btn btn-default" style="width:6em;margin-right:1em;">查看</a>
+                        <a href="javascript:void(0)" v-on:click="apply(item._id)" class="btn btn-primary" :disabled="apply_status[item._id]"  style="width:6em;">应用</a></th>
+                    </li>
+                </ul>
+                <nav aria-label="Page navigation">
+                        <ul class="pagination">
+                              <li class="page-item" v-if="page!=0">
+                                <a class="page-link" href="#" aria-label="Previous" v-on:click="goto_page(page-1)">
+                                  <span aria-hidden="true">&laquo;</span>
+                                </a>
+                              </li>
+                              <li v-for="i in pagination_pages()" class="page-item" v-bind:class="{ active: page==i-1 }"><a class="page-link" href="#sharelist" v-on:click="goto_page(i-1)">{{i}}</a></li>
+                              <li class="page-item" v-if="page+1!=sharelist.last_page">
+                                <a class="page-link" href="#" aria-label="Next" v-on:click="goto_page(page+1)">
+                                  <span aria-hidden="true">&raquo;</span>
+                                </a>
+                              </li>
+                            </ul>
+                          </nav>
+
                 <div class="modal fade" id="detail_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
                     <div class="modal-dialog">
-                        <div class="modal-content">
+                        <div class="modal-content" style="padding: 2em">
                             <div class="modal-header">
                                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                                 <h4 class="modal-title" id="myModalLabel">详细</h4>
@@ -135,9 +149,9 @@
                             </thead>
                             <tbody>
                                 <tr v-for="filter in blacklist">
-                                    <th>{{["普通","正则","用户"][filter.type]}}</th>
-                                    <th>{{filter.filter}}</th>
-                                    <th><a href="javascript:void(0)" v-on:click="removeItem(filter.id)">删除</a></th>
+                                    <td>{{["普通","正则","用户"][filter.type]}}</td>
+                                    <td>{{filter.filter}}</td>
+                                    <td><a href="javascript:void(0)" v-on:click="removeItem(filter.id)">删除</a></td>
                                 </tr>
                             </tbody>
                         </table>
