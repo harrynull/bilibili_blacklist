@@ -15,7 +15,7 @@ export function registerApis(app: express.Application) {
             });
         });
     });
-    app.get('/api/sharelist', function (req, response) {
+    app.get('/sharelist', function (req, response) {
         let page = parseInt(req.query["page"]);
         let per_page = 20;
         let sort = req.query["sort"];
