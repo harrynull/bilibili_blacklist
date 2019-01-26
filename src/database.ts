@@ -4,10 +4,10 @@ let DatabaseAddress = 'mongodb://localhost:27017/bilibili_blacklist';
 type DatabaseCallback = ((database: Database) => void);
 type OperationCallback<T> = ((result: T) => void) | null;
 
-export class Database {
+var client!: mongo.MongoClient;
+var db!: mongo.Db;
 
-    private client!: mongo.MongoClient;
-    private db!: mongo.Db;
+export class Database {
 
     /**
      * Creates an instance of Database and automatically connects to the server.
@@ -15,10 +15,14 @@ export class Database {
      * @memberof Database
      */
     public constructor(afterDoneSuccessfully: DatabaseCallback) {
+        if(db){
+            afterDoneSuccessfully(this);
+            return;
+        }
         let _this = this;
         (async function() {
-            _this.client = await mongo.MongoClient.connect(DatabaseAddress, { useNewUrlParser: true });
-            _this.db = _this.client.db();
+            client = await mongo.MongoClient.connect(DatabaseAddress, { useNewUrlParser: true });
+            db = client.db();
             afterDoneSuccessfully(_this);
           })()
     }
@@ -32,7 +36,7 @@ export class Database {
      * @memberof Database
      */
     public insertOne(tableName: string, data: any, afterDoneSuccessfully: OperationCallback<mongo.InsertOneWriteOpResult>) {
-        this.db.collection(tableName).insertOne(data, function (error, result) {
+        db.collection(tableName).insertOne(data, function (error, result) {
             if (error) {
                 console.log('[Error][DB] Insert: ' + error);
             } else if (afterDoneSuccessfully) {
@@ -50,7 +54,7 @@ export class Database {
      * @memberof Database
      */
     public find(tableName: string, where: object, afterDoneSuccessfully: OperationCallback<any[]>) {
-        this.db.collection(tableName).find(where).toArray(function (error, result) {
+        db.collection(tableName).find(where).toArray(function (error, result) {
             if (error) {
                 console.log('[Error][DB] Find: ' + error);
             } else if (afterDoneSuccessfully) {
@@ -70,7 +74,7 @@ export class Database {
      * @memberof Database
      */
     public updateOne(tableName: string, where: object, update: object, options: mongo.ReplaceOneOptions, afterDoneSuccessfully: OperationCallback<mongo.UpdateWriteOpResult>) {
-        this.db.collection(tableName).updateOne(where, update, options, function (error, result) {
+        db.collection(tableName).updateOne(where, update, options, function (error, result) {
             if (error) {
                 console.log('[Error][DB] Update: ' + error);
             } else if (afterDoneSuccessfully) {
@@ -88,7 +92,7 @@ export class Database {
      * @memberof Database
      */
     public deleteOne(tableName: string, where: object, afterDoneSuccessfully: OperationCallback<mongo.DeleteWriteOpResultObject>) {
-        this.db.collection(tableName).deleteOne(where, function (error, result) {
+        db.collection(tableName).deleteOne(where, function (error, result) {
             if (error) {
                 console.log('[Error][DB] Delete: ' + error);
             } else if (afterDoneSuccessfully) {
@@ -117,7 +121,7 @@ export class Database {
      * @memberof Database
      */
     public close() {
-        this.client.close();
+        //client.close();
     }
 
     /**
@@ -132,6 +136,5 @@ export class Database {
         return new mongo.ObjectID(id);
     }
 
-    public getRawDb(){ return this.db; }
+    public getRawDb(){ return db; }
 }
-
