@@ -25,10 +25,15 @@ Bilibili的弹幕环境是众所周知的不尽人意，而其自带的弹幕屏
 
 从已有网站导入分享数据：
 
-​	GET /fetch_sharelist 即可获得sharelist数据库的内容。
-   GET /tags 即可获得tags。
+    GET /fetch_sharelist 即可获得sharelist数据库的内容。
+    GET /tags 即可获得tags。
 
 ​	例如：http://harrynull.tech/bilibili/fetch_sharelist。
+
+导入示例：
+```shell
+mongoimport --db bilibili_blacklist --collection sharelist --file fetch_sharelist.json --jsonArray
+```
 
 
 ## 使用

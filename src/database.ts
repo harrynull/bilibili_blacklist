@@ -1,5 +1,5 @@
 import mongo = require('mongodb');
-let DatabaseAddress = 'mongodb://localhost:27017/';
+let DatabaseAddress = 'mongodb://localhost:27017/bilibili_blacklist';
 
 type DatabaseCallback = ((database: Database) => void);
 type OperationCallback<T> = ((result: T) => void) | null;
@@ -16,16 +16,11 @@ export class Database {
      */
     public constructor(afterDoneSuccessfully: DatabaseCallback) {
         let _this = this;
-        mongo.MongoClient.connect(DatabaseAddress, function (error, client) {
-            _this.client = client;
-            _this.db = client.db("bilibili_blacklist");
-            if (error != null) {
-                console.log('[Error][DB] Connect: ' + error);
-            } else if (afterDoneSuccessfully) {
-                afterDoneSuccessfully(_this);
-            }
-        });
-
+        (async function() {
+            _this.client = await mongo.MongoClient.connect(DatabaseAddress, { useNewUrlParser: true });
+            _this.db = _this.client.db();
+            afterDoneSuccessfully(_this);
+          })()
     }
 
     /**
@@ -136,5 +131,7 @@ export class Database {
     public static getID(id: string) {
         return new mongo.ObjectID(id);
     }
+
+    public getRawDb(){ return this.db; }
 }
 

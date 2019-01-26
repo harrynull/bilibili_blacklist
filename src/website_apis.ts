@@ -8,10 +8,37 @@ const AdminUID = -1;
 
 export function registerApis(app: express.Application) {
     app.get('/fetch_sharelist', function (req, response) {
-        new database.Database(function (db) {
+        new database.Database(function(db) {
             db.find("sharelist", {}, function (res) {
                 response.json(res);
                 db.close();
+            });
+        });
+    });
+    app.get('/api/sharelist', function (req, response) {
+        let page = parseInt(req.query["page"]);
+        let per_page = 20;
+        let sort = req.query["sort"];
+        let dir = req.query["dir"];
+        let query = req.query["filter"] ? {tags: {$in: req.query["filter"].split(',')}} : {};
+        if(!page) page = 0;
+        new database.Database(function(db) {
+            let collection = db.getRawDb().collection("sharelist");
+            collection.countDocuments(query, function(error, count) {
+                let cursor = collection.find(query);
+                if(sort && dir) cursor = cursor.sort(sort, dir);
+                cursor.limit(per_page).skip(page*per_page).toArray(function(err, res){
+                    response.json(
+                        {
+                            "total":count,
+                            "per_page":per_page,
+                            "current_page":page,
+                            "last_page":Math.ceil(count/per_page),
+                            "data":res
+                        }
+                    );
+                    db.close();
+                });
             });
         });
     });
