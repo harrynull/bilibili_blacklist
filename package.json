@@ -9,6 +9,7 @@
     "ejs": "^2.5.6",
     "express": "^4.16.4",
     "mongodb": "^3.1.13",
+    "node-cache": "^4.2.0",
     "request": "^2.88.0"
   },
   "devDependencies": {
