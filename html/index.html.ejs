@@ -4,189 +4,180 @@
 <head>
     <title>Bilibili 屏蔽词分享平台</title>
     <% include template/head %>
-        <style>
-            body {
-                padding-bottom: 20px;
-            }
-            .comment {
-                margin: 20px;
-            }
-            .container{
-                padding: 0 10%;
-            }
-            .item{
-                padding: 30px 5px;
-                border-bottom:1px solid #777;
-            }
-            .item:hover{
-                background-color:#EEE;
-            }
-            .token a {
-                color: #777;
-            }
-            .sharelist_item{padding:2em;}
-            h2{font-size:2em;}
-        </style>
-        <link href="https://cdn.bootcss.com/bootstrap-tokenfield/0.12.0/css/bootstrap-tokenfield.min.css" rel="stylesheet">
-        <link href="https://cdn.bootcss.com/jqueryui/1.12.1/jquery-ui.min.css" rel="stylesheet">
+    <style>
+        body { padding-bottom: 20px; }
+        .comment { margin: 20px; }
+        .container{ padding: 0 10%; }
+        .item{ padding: 30px 5px; border-bottom:1px solid #777; }
+        .item:hover{ background-color:#EEE; }
+        .token a { color: #777; }
+        .sharelist_item{padding:2em;}
+        h2{font-size:2em;}
+    </style>
+    <link href="https://cdn.bootcss.com/bootstrap-tokenfield/0.12.0/css/bootstrap-tokenfield.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcss.com/jqueryui/1.12.1/jquery-ui.min.css" rel="stylesheet">
 
 </head>
 
 <body>
     <div id="main-container">
         <% include template/header %>
-            <div class="jumbotron">
-                <div class="container">
-                    <h1>Bilibili 屏蔽词分享平台</h1>
-                    <p>这是一个可以用来分享、管理您在Bilibili设置的弹幕屏蔽词的网站</p>
-                    <p>请注意：这并不是Bilibili的官方网站，与Bilibili官方无关</p>
-                </div>
+        <div class="jumbotron">
+            <div class="container">
+                <h1>Bilibili 屏蔽词分享平台</h1>
+                <p>这是一个可以用来分享、管理您在Bilibili设置的弹幕屏蔽词的网站</p>
+                <p>请注意：这并不是Bilibili的官方网站，与Bilibili官方无关</p>
+            </div>
+        </div>
+
+        <div class="container">
+            <h2>分享列表 <a href="submit.html" class="btn btn-success" style="float:right;margin-right:15px">提交屏蔽词包</a></h2>
+            <hr>
+            按标签筛选： <div style="display:inline-block;"><input type="text" class="form-control" id="tags" style="width:20em;" /></div>
+            排序：<div class="btn-group" role="group" aria-label="...">
+                <button type="button" :class="'btn btn-'+(sortBy=='usage'?'primary':'secondary')" v-on:click="sortByUsage()">使用量</button>
+                <button type="button" :class="'btn btn-'+(sortBy=='time'?'primary':'secondary')" v-on:click="sortByDate()">发布时间</button>
             </div>
 
-            <div class="container">
-                <h2>分享列表 <a href="submit.html" class="btn btn-success" style="float:right;margin-right:15px">提交屏蔽词包</a></h2>
-                <hr>
-                按标签筛选： <div style="display:inline-block;"><input type="text" class="form-control" id="tags" style="width:20em;"/></div>
-                排序：<div class="btn-group" role="group" aria-label="...">
-                    <button type="button" :class="'btn btn-'+(sortBy=='usage'?'primary':'default')" v-on:click="sortByUsage()">使用量</button>
-                    <button type="button" :class="'btn btn-'+(sortBy=='time'?'primary':'default')" v-on:click="sortByDate()">发布时间</button>
-                    </div>
-
-                <ul class="list-group" style="margin-top:2em" id="sharelist">
-                    <li v-for="item in sharelist.data" class="list-group-item sharelist_item" v-if="item.filters[0]">
-                        <p><a href="javascript:void(0)" v-on:click="detail(item._id)">{{item.name}}</a> <span style="margin-left:1em"></span><span v-for="tag in item.tags" class="label label-default" style="margin:0 2px">{{tag}}</span></p>
-                        <p><span class="glyphicon glyphicon-star" aria-hidden="true"></span> {{calcVoteDisplay(item)}} | {{item.usage}} 次使用 {{['| 几乎不误伤','| 可能轻微误伤','| 可能严重误伤'][item['safe-level']]}}</p>
-                        <p>{{item.description}}</p>
-                        <p style="color:#aaa">{{filters_preview(item.filters)}}</p>
-                        <a href="javascript:void(0)" v-on:click="detail(item._id)" class="btn btn-default" style="width:6em;margin-right:1em;">查看</a>
-                        <a href="javascript:void(0)" v-on:click="apply(item._id)" class="btn btn-primary" :disabled="apply_status[item._id]"  style="width:6em;">应用</a></th>
+            <ul class="list-group" style="margin-top:2em" id="sharelist">
+                <li v-for="item in sharelist.data" class="list-group-item sharelist_item" v-if="item.filters[0]">
+                    <p><a href="javascript:void(0)" v-on:click="detail(item._id)">{{item.name}}</a> <span style="margin-left:1em"></span><span
+                            v-for="tag in item.tags" class="badge badge-primary" style="margin:0 2px">{{tag}}</span></p>
+                    <p><span class="glyphicon glyphicon-star" aria-hidden="true"></span> {{calcVoteDisplay(item)}} |
+                        {{item.usage}} 次使用 {{['| 几乎不误伤','| 可能轻微误伤','| 可能严重误伤'][item['safe-level']]}}</p>
+                    <p>{{item.description}}</p>
+                    <p style="color:#aaa">{{filters_preview(item.filters)}}</p>
+                    <a href="javascript:void(0)" v-on:click="detail(item._id)" class="btn btn-info" style="width:6em;margin-right:1em;">查看</a>
+                    <a href="javascript:void(0)" v-on:click="apply(item._id)" class="btn btn-primary" :disabled="apply_status[item._id]"
+                        style="width:6em;">应用</a></th>
+                </li>
+            </ul>
+            <nav aria-label="Page navigation" style="margin: 2em">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item" v-if="page!=0">
+                        <a class="page-link" href="#" aria-label="Previous" v-on:click="goto_page(page-1)">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    <li v-for="i in pagination_pages()" class="page-item" v-bind:class="{ active: page==i-1 }"><a class="page-link"
+                            href="#sharelist" v-on:click="goto_page(i-1)">{{i}}</a></li>
+                    <li class="page-item" v-if="page+1!=sharelist.last_page">
+                        <a class="page-link" href="#" aria-label="Next" v-on:click="goto_page(page+1)">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
                     </li>
                 </ul>
-                <nav aria-label="Page navigation">
-                        <ul class="pagination">
-                              <li class="page-item" v-if="page!=0">
-                                <a class="page-link" href="#" aria-label="Previous" v-on:click="goto_page(page-1)">
-                                  <span aria-hidden="true">&laquo;</span>
-                                </a>
-                              </li>
-                              <li v-for="i in pagination_pages()" class="page-item" v-bind:class="{ active: page==i-1 }"><a class="page-link" href="#sharelist" v-on:click="goto_page(i-1)">{{i}}</a></li>
-                              <li class="page-item" v-if="page+1!=sharelist.last_page">
-                                <a class="page-link" href="#" aria-label="Next" v-on:click="goto_page(page+1)">
-                                  <span aria-hidden="true">&raquo;</span>
-                                </a>
-                              </li>
-                            </ul>
-                          </nav>
+            </nav>
 
-                <div class="modal fade" id="detail_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content" style="padding: 2em">
-                            <div class="modal-header">
-                                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                                <h4 class="modal-title" id="myModalLabel">详细</h4>
-                            </div>
-                            <div class="modal-body">
-                                <p>名称: {{detailjson["name"]}}</p>
-                                <p>Tag: {{detailjson["tags"]?detailjson["tags"].join(', '):"N/A"}}</p>
-                                <p>误伤程度： {{['几乎不误伤','可能轻微误伤','可能严重误伤'][detailjson["safe-level"]]}}</p>
-                                <p>发布时间：{{getTime(detailjson["time"])}}</p>
-                                <p>使用量: {{detailjson["usage"]}}</p>
-                                <p>介绍: <span v-if='detailjson["description"]==""'>无</span></p>
-                                <pre v-if='detailjson["description"]!=""'>{{detailjson["description"]}}</pre>
-                                <p>创建者: <a :href="'https://space.bilibili.com/'+detailjson['uid']">{{detailjson["uid"]}}</a></p>
-                                <p>屏蔽词</p>
-                                <table class="table table-striped">
-                                    <tr>
-                                        <th style="width: 5em">类型</th>
-                                        <th>内容</th>
-                                    </tr>
-                                    <tr v-for="filter in detailjson['filters']">
-                                        <td>{{["普通","正则","用户"][filter.type]}}</td>
-                                        <td>{{filter.filter}}</td>
-                                    </tr>
-                                </table>
-                                <p>评论：</p>
-                                <div class="comments">
-                                    <div class="comment" v-for="comment in detailjson['comments']" v-if="comment.content!=''">
-                                        <span :class="'glyphicon glyphicon-thumbs-'+(comment.like?'up': (comment.like===false?'down':'') )" aria-hidden="true"></span>                                        <a :href="'https://space.bilibili.com/'+comment.uid">{{comment.uid}}</a>: {{comment.content}}</div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-1" style="font-size:2em;" id="good" v-on:click="vote(1)">
-                                        <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
-                                    </div>
-                                    <div class="col-md-1" style="font-size:2em;" id="bad" v-on:click="vote(0)">
-                                        <span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
-                                    </div>
-
-                                    <div class="col-md-8">
-                                        <input type="text" placeholder="评论内容" class="form-control" id="comment_content">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <button type="button" class="btn btn-success" v-on:click="postComment">发布</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-success" v-on:click="apply(detailid)" s:disabled="apply_status[detailid]!=undefined">{{apply_status[detailid]==undefined?"应用":"已应用"}}</button>
-                                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
-                            </div>
+            <div class="modal fade" id="detail_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content" style="padding: 2em">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="exampleModalLabel">{{detailjson["name"]}}</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
                         </div>
-                        <!-- /.modal-content -->
-                    </div>
-                    <!-- /.modal -->
-                </div>
-                <div class="row">
-                    <h2>您的屏蔽列表</h2>
-                    <hr>
-                    <div v-if="!notLogin">
-                        <table class="table table-hover">
-                            <thead>
+                        <div class="modal-body">
+                            <p style="color:#777">{{getTime(detailjson["time"])}} | 作者: <a :href="'https://space.bilibili.com/'+detailjson['uid']">{{detailjson["uid"]}}</a></p>
+                            <p>{{detailjson["usage"]}} 次使用</p>
+                            <p v-if="detailjson['tags']">Tags: {{detailjson["tags"].join(', ')}}</p>
+                            <p v-if="detailjson['safe-level']">误伤程度：
+                                {{['几乎不误伤','可能轻微误伤','可能严重误伤'][detailjson["safe-level"]]}}</p>
+                            <p>介绍: <span v-if='detailjson["description"]==""'>无</span></p>
+                            <pre v-if='detailjson["description"]!=""'>{{detailjson["description"]}}</pre>
+                            <p>屏蔽词</p>
+                            <table class="table table-striped">
                                 <tr>
-                                    <th>类型</th>
-                                    <th>屏蔽内容</th>
-                                    <th>操作</th>
+                                    <th style="width: 5em">类型</th>
+                                    <th>内容</th>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="filter in blacklist">
+                                <tr v-for="filter in detailjson['filters']">
                                     <td>{{["普通","正则","用户"][filter.type]}}</td>
                                     <td>{{filter.filter}}</td>
-                                    <td><a href="javascript:void(0)" v-on:click="removeItem(filter.id)">删除</a></td>
                                 </tr>
-                            </tbody>
-                        </table>
-
-                        <form action="add_item" method="post">
+                            </table>
+                            <p>评论：</p>
+                            <div class="comments">
+                                <div class="comment" v-for="comment in detailjson['comments']" v-if="comment.content!=''">
+                                    <span :class="'glyphicon glyphicon-thumbs-'+(comment.like?'up': (comment.like===false?'down':'') )"
+                                        aria-hidden="true"></span> <a :href="'https://space.bilibili.com/'+comment.uid">{{comment.uid}}</a>:
+                                    {{comment.content}}</div>
+                            </div>
                             <div class="row">
-                                <div class="col-md-4">
-                                    <select class="form-control" name="type" id="type">
-                                    <option value="0">普通</option>
-                                    <option value="1">正则</option>
-                                    <option value="2">用户</option>
-                                    </select>
+                                <div class="col-md-1" style="font-size:2em;" id="good" v-on:click="vote(1)">
+                                    <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>
                                 </div>
-                                <div class="col-md-6">
-                                    <input type="text" placeholder="屏蔽内容" class="form-control" name="filter" id="filter">
+                                <div class="col-md-1" style="font-size:2em;" id="bad" v-on:click="vote(0)">
+                                    <span class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
+                                </div>
+
+                                <div class="col-md-8">
+                                    <input type="text" placeholder="评论内容" class="form-control" id="comment_content">
                                 </div>
                                 <div class="col-md-2">
-                                    <button class="btn btn-success">添加</button>
+                                    <button type="button" class="btn btn-success" v-on:click="postComment">发布</button>
                                 </div>
                             </div>
-                        </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-success" v-on:click="apply(detailid)" s:disabled="apply_status[detailid]!=undefined">{{apply_status[detailid]==undefined?"应用":"已应用"}}</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+                        </div>
                     </div>
-                    <div v-if="notLogin">
-                        <a href="login.html" class="btn btn-success">登录</a>
-                    </div>
+                    <!-- /.modal-content -->
                 </div>
+                <!-- /.modal -->
             </div>
+            <h2>您的屏蔽列表</h2>
+            <div class="row" v-if="!notLogin">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>类型</th>
+                            <th>屏蔽内容</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="filter in blacklist">
+                            <td>{{["普通","正则","用户"][filter.type]}}</td>
+                            <td>{{filter.filter}}</td>
+                            <td><a href="javascript:void(0)" v-on:click="removeItem(filter.id)">删除</a></td>
+                        </tr>
+                    </tbody>
+                </table>
 
-            <hr>
-
-            <footer>
-                <div style="text-align:center">
-                    <p>&copy; 2018-2019 <a href="https://harrynull.tech">Harry Yu</a>. Licensed under MIT License. <a href="https://github.com/abc612008/bilibili_blacklist">Contribute to it</a>.</p>
+            </div>
+            <form action="add_item" method="post">
+                <div class="row">
+                    <div class="col-md-4">
+                        <select class="form-control" name="type" id="type">
+                            <option value="0">普通</option>
+                            <option value="1">正则</option>
+                            <option value="2">用户</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" placeholder="屏蔽内容" class="form-control" name="filter" id="filter">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-success">添加</button>
+                    </div>
                 </div>
-            </footer>
+            </form>
+            <div v-if="notLogin">
+                <a href="login.html" class="btn btn-success">登录</a>
+            </div>
+        </div>
+
+        <footer>
+            <div style="text-align:center; margin-top:2em">
+                <p>&copy; 2018-2019 <a href="https://harrynull.tech">Harry Yu</a>. Licensed under MIT License. <a href="https://github.com/abc612008/bilibili_blacklist">Contribute
+                        to it</a>.</p>
+            </div>
+        </footer>
     </div>
     <!-- /container -->
     </div>

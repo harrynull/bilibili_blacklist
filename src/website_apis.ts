@@ -3,12 +3,64 @@ import express = require('express');
 import database = require('./database');
 import bilibili = require('./bilibili');
 import interfaces = require('./interface');
-
+import NodeCache = require("node-cache");
+const cache = new NodeCache();
 const AdminUID = -1;
+
+function sharelist_filter(list: interfaces.UserBlacklist, filter: number){
+    var ret: interfaces.UserBlacklist = {};
+    if(filter == 0) return list;
+    for (let key in list) if(list[key]>=filter) ret[key] = list[key];
+    return ret;
+}
+
+
+function fetch_user_sharelist(db: database.Database, filter: number, callback: ((res: object) => void)){
+
+    cache.get("user_sharelist_" + filter, function (err, value) {
+            
+        if (value == undefined) {
+
+            cache.get("user_sharelist", function (err, cache_list: any) {
+                if (cache_list == undefined) {
+                    // not in cache; fetch from the database
+                    db.find("user_sharelist", {}, function (res) {
+                        var user_blacklist: interfaces.UserBlacklist = {};
+                        for (let item of res) {
+                            for (let uid of item.data) {
+                                user_blacklist[uid] = user_blacklist[uid] ? user_blacklist[uid] + 1 : 1;
+                            }
+                        }
+                        cache.set("user_sharelist", user_blacklist, 60 * 20);
+
+                        var ret = sharelist_filter(user_blacklist, filter);
+                        cache.set("user_sharelist_" + filter, ret, 60 * 20);
+                        callback(ret);
+                                            
+                    });
+        
+                }else{
+
+                    var ret = sharelist_filter(cache_list, filter);
+                    cache.set("user_sharelist_" + filter, ret, 60 * 20);
+                    callback(ret);
+                    
+                }
+                
+            });
+
+        }else{
+            callback(value);
+        }
+    
+    });
+
+}
+
 
 export function registerApis(app: express.Application) {
     app.get('/fetch_sharelist', function (req, response) {
-        new database.Database(function(db) {
+        new database.Database(function (db) {
             db.find("sharelist", {}, function (res) {
                 response.json(res);
                 db.close();
@@ -20,21 +72,21 @@ export function registerApis(app: express.Application) {
         let per_page = 20;
         let sort = req.query["sort"];
         let dir = req.query["dir"];
-        let query = req.query["filter"] ? {tags: {$in: req.query["filter"].split(',')}} : {};
-        if(!page) page = 0;
-        new database.Database(function(db) {
+        let query = req.query["filter"] ? { tags: { $in: req.query["filter"].split(',') } } : {};
+        if (!page) page = 0;
+        new database.Database(function (db) {
             let collection = db.getRawDb().collection("sharelist");
-            collection.countDocuments(query, function(error, count) {
+            collection.countDocuments(query, function (error, count) {
                 let cursor = collection.find(query);
-                if(sort && dir) cursor = cursor.sort(sort, dir);
-                cursor.limit(per_page).skip(page*per_page).toArray(function(err, res){
+                if (sort && dir) cursor = cursor.sort(sort, dir);
+                cursor.limit(per_page).skip(page * per_page).toArray(function (err, res) {
                     response.json(
                         {
-                            "total":count,
-                            "per_page":per_page,
-                            "current_page":page,
-                            "last_page":Math.ceil(count/per_page),
-                            "data":res
+                            "total": count,
+                            "per_page": per_page,
+                            "current_page": page,
+                            "last_page": Math.ceil(count / per_page),
+                            "data": res
                         }
                     );
                     db.close();
@@ -148,25 +200,15 @@ export function registerApis(app: express.Application) {
     });
 
     app.get('/fetch_user_sharelist', function (req, response) {
+        var uid = parseInt(req.cookies.uid);
+        var filter = parseInt(req.query["filter"]);
         new database.Database(function (db) {
-            db.find("user_sharelist", {}, function (res) {
-                db.find("user_sharelist", { "uid": parseInt(req.cookies.uid) }, function (r) {
-                    if (r.length == 0) {
-                        response.json({ "code": -2, "message": "Need to share first." });
-                        db.close();
-                        return;
-                    }
-                    var user_blacklist: interfaces.UserBlacklist = {}
-                    for (let item of res) {
-                        for (let uid of item.data) {
-                            user_blacklist[uid] = user_blacklist[uid] ? user_blacklist[uid] + 1 : 1;
-                        }
-                    }
-                    var user_blacklist_arr: interfaces.UserBlacklistItem[] = []
-                    for (let key in user_blacklist) user_blacklist_arr.push({ uid: key, num: user_blacklist[key] });
-                    response.json(user_blacklist_arr);
-                    db.close();
-                });
+            db.find("user_sharelist", { "uid": uid }, function (r) { // validate uid first
+                if (r.length == 0&&false){
+                    response.json({ "code": -2, "message": "Need to share first." });
+                    return;
+                }
+                fetch_user_sharelist(db, filter, function(res){response.json(res);});                
             });
         });
     });
@@ -182,7 +224,7 @@ export function registerApis(app: express.Application) {
     });
 
     app.get('/remove', function (req, response) {
-        if(parseInt(req.cookies.uid)!=AdminUID) {
+        if (parseInt(req.cookies.uid) != AdminUID) {
             response.json({ "code": -3, "message": "Access denied." });
             return;
         }
@@ -193,19 +235,19 @@ export function registerApis(app: express.Application) {
                     db.close();
                     return;
                 }
-                if(!req.query["id"]){
+                if (!req.query["id"]) {
                     db.find("sharelist", {}, function (res) {
                         var ret = "<style>body{font-family:monospace;}</style><ul>";
-                        for(let item of res){
-                            ret+="<li>"+item._id+": "+item.name+" <a href='remove?id="+item._id+"'>Remove</a></li>"
+                        for (let item of res) {
+                            ret += "<li>" + item._id + ": " + item.name + " <a href='remove?id=" + item._id + "'>Remove</a></li>"
                         }
-                        ret+="</ul>"
+                        ret += "</ul>"
                         response.send(ret);
                         db.close();
                     });
                     return;
                 }
-                db.deleteOne("sharelist", {_id: database.Database.getID(req.query["id"])},function(r){
+                db.deleteOne("sharelist", { _id: database.Database.getID(req.query["id"]) }, function (r) {
                     response.redirect("remove");
                     db.close();
                 });

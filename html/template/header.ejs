@@ -1,10 +1,18 @@
-<nav class="navbar navbar-inverse" style="padding: 0% 20%; margin-bottom:0">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark" style="padding-left: 20%;padding-right: 20%;">
         <a class="navbar-brand mr-auto" href="index.html">Bilibili 屏蔽词分享平台</a>
-        <div class="navbar-form navbar-right">
-                <div class="row">
-                <a v-if="notLogin" href="login.html" style="color:#FFF;float:right; padding-top:6px;">登录</a>
-                <p v-if="!notLogin" style="color:#FFF;float:right; padding-top:6px;"> UID {{uid}}</p>
-                <a href="user.html" style="color:#FFF;float:right; margin-right:15px; padding-top:6px;">用户屏蔽</a>
-                </div>
-            </div>
-      </nav>
+
+        <div class="collapse navbar-collapse">
+                <ul class="navbar-nav mr-auto" style="margin-left:2em">
+                        <li class="nav-item">
+                                <a class="nav-link" href="#">首页</a>
+                        </li>
+                        <li class="nav-item">
+                                <a class="nav-link" href="user.html">用户屏蔽</a>
+                        </li>
+                        <li class="nav-item">
+                                <a class="nav-link" v-if="notLogin" href="login.html">登录</a>
+                                <span class="nav-link" v-else> UID {{uid}}</span>
+                        </li>
+                </ul>
+        </div>
+</nav>
