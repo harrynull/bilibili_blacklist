@@ -5,10 +5,7 @@ import bodyParser = require('body-parser');
 
 import bilibili = require('./src/bilibili');
 import login = require('./src/login');
-import website = require('./src/website_apis')
-
-import https = require('https')
-import fs = require('fs');
+import website = require('./src/website_apis');
 
 var app = express();
 app.set('view engine', 'ejs');
@@ -33,10 +30,9 @@ login.registerApis(app);
 bilibili.registerApis(app);
 website.registerApis(app);
 
-var options = {
-    key  : fs.readFileSync('/etc/letsencrypt/live/harrynull.tech/privkey.pem'),
-    cert : fs.readFileSync('/etc/letsencrypt/live/harrynull.tech/fullchain.pem')
-}
+login.registerApis(app);
+bilibili.registerApis(app);
+website.registerApis(app);
 
-https.createServer(options, app).listen(8443);
+var server = app.listen(8000)
 console.log("Server started.")
