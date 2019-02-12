@@ -34,5 +34,5 @@ login.registerApis(app);
 bilibili.registerApis(app);
 website.registerApis(app);
 
-var server = app.listen(8000)
+var server = app.listen(8000, "localhost")
 console.log("Server started.")
