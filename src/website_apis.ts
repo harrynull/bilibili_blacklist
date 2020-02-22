@@ -17,43 +17,32 @@ function sharelist_filter(list: interfaces.UserBlacklist, filter: number){
 
 function fetch_user_sharelist(db: database.Database, filter: number, callback: ((res: object) => void)){
 
-    cache.get("user_sharelist_" + filter, function (err, value) {
-            
-        if (value == undefined) {
-
-            cache.get("user_sharelist", function (err, cache_list: any) {
-                if (cache_list == undefined) {
-                    // not in cache; fetch from the database
-                    db.find("user_sharelist", {}, function (res) {
-                        var user_blacklist: interfaces.UserBlacklist = {};
-                        for (let item of res) {
-                            for (let uid of item.data) {
-                                user_blacklist[uid] = user_blacklist[uid] ? user_blacklist[uid] + 1 : 1;
-                            }
-                        }
-                        cache.set("user_sharelist", user_blacklist, 60 * 20);
-
-                        var ret = sharelist_filter(user_blacklist, filter);
-                        cache.set("user_sharelist_" + filter, ret, 60 * 20);
-                        callback(ret);
-                                            
-                    });
-        
-                }else{
-
-                    var ret = sharelist_filter(cache_list, filter);
-                    cache.set("user_sharelist_" + filter, ret, 60 * 20);
-                    callback(ret);
-                    
-                }
-                
-            });
-
+    var value: object | undefined = cache.get("user_sharelist_" + filter);
+    if (value == undefined) {
+        var user_blacklist: interfaces.UserBlacklist | undefined = cache.get("user_sharelist");
+        if (user_blacklist == undefined) { // not in cache; fetch from the database
+            db.find("user_sharelist", {}, function (res) {
+				user_blacklist = {};
+				for (let item of res) {
+					for (let uid of item.data) {
+						user_blacklist[uid] = user_blacklist[uid] ? user_blacklist[uid] + 1 : 1;
+					}
+				}
+				cache.set("user_sharelist", user_blacklist, 60 * 20);
+				
+				var ret = sharelist_filter(user_blacklist, filter);
+				cache.set("user_sharelist_" + filter, ret, 60 * 20);
+				callback(ret);   
+			});
         }else{
-            callback(value);
-        }
-    
-    });
+			var ret = sharelist_filter(user_blacklist, filter);
+			cache.set("user_sharelist_" + filter, ret, 60 * 20);
+			callback(ret);
+		}
+
+    } else {
+        callback(value);
+    }
 
 }
 
