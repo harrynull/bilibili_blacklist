@@ -32,10 +32,10 @@ export class Database {
      * 
      * @param {string} tableName the name of the table
      * @param {*} data the data you want to insert into.
-     * @param {OperationCallback<mongo.InsertOneWriteOpResult>} afterDoneSuccessfully callback
+     * @param {OperationCallback<mongo.InsertOneWriteOpResult<any>>} afterDoneSuccessfully callback
      * @memberof Database
      */
-    public insertOne(tableName: string, data: any, afterDoneSuccessfully: OperationCallback<mongo.InsertOneWriteOpResult>) {
+    public insertOne(tableName: string, data: any, afterDoneSuccessfully: OperationCallback<mongo.InsertOneWriteOpResult<any>>) {
         db.collection(tableName).insertOne(data, function (error, result) {
             if (error) {
                 console.log('[Error][DB] Insert: ' + error);
