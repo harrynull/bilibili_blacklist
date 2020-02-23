@@ -4,14 +4,14 @@
 <head>
     <title>Bilibili 屏蔽词分享平台</title>
 
-    <% include template/head %>
+    <%- include("template/haed"); %>
     <link href="css/range.css" rel="stylesheet">
 
 </head>
 
 <body>
     <div id="main-container">
-        <% include template/header %>
+        <%- include("template/header"); %>
         <div class="container">
             <div v-if="share_first">
                 <form action="share_user_blacklist" method="POST">
@@ -38,7 +38,7 @@
         </div>
         <!-- /container -->
     </div>
-    <% include template/foot %>
+    <%- include("template/foot"); %>
 
     <script>
         var app = new Vue({
