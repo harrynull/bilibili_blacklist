@@ -1,7 +1,5 @@
 require("should");
-var request = require('supertest')
-  , app     = require('../build/app.js').app
-  , assert  = require("assert")
+var assert  = require("assert")
   , login   = require('../build/src/login.js');
 
 describe('login', function() {
