@@ -4,7 +4,7 @@
 <head>
     <title>Bilibili 屏蔽词分享平台 | 登录</title>
 
-    <% include template/head %>
+    <%- include("template/head"); %>
     <style>
         body {
             background: url(img/background.jpg) fixed center center no-repeat;
@@ -100,7 +100,7 @@
             </form>
         </div>
     </div>
-    <% include template/foot %>
+    <%- include("template/foot"); %>
 
     <script src="js/jquery.qrcode.min.js"></script>
     <script>
