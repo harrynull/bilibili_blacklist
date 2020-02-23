@@ -87,3 +87,5 @@ export function registerApis(app: express.Application) {
         });
     });
 }
+
+export let _generateToken = generateToken;
