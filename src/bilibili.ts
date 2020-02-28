@@ -22,7 +22,7 @@ export function jsonCall(url: string, cookie: null | string, callback: JSONCallb
     request.get({ url: url, headers: { 'Cookie': cookie } },
         function (error, response, body) {
             if (error || response.statusCode != 200) {
-                if (err) err(error);
+                if (err) err(error?error:body);
             } else if (callback) 
 				try{
 					callback(JSON.parse(body));
@@ -46,7 +46,7 @@ export function jsonCallPost(url: string, cookie: null | string, args: object, c
     request.post({ url: url, headers: { 'Cookie': cookie, 'Content-Type': 'application/x-www-form-urlencoded' }, form: args },
         function (error, response, body) {
             if (error || response.statusCode != 200) {
-                if (err) err(error);
+                if (err) err(error?error:body);
             } else if (callback) {
 				try{
 					callback(JSON.parse(body));
@@ -110,8 +110,8 @@ export function registerApis(app: express.Application) {
         );
         app.post('/add_item', function (req, response) {
             addFilter(req.cookies.bilibili_cookies, req.cookies.csrf, req.body["type"], req.body["filter"], function (suc, result) {
-                //response.json(result);
-                response.redirect("index.html");
+                if(!suc) response.send(result);
+                else response.redirect("index.html");
             });
         })
     });
