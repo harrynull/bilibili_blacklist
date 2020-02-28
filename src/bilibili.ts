@@ -23,7 +23,12 @@ export function jsonCall(url: string, cookie: null | string, callback: JSONCallb
         function (error, response, body) {
             if (error || response.statusCode != 200) {
                 if (err) err(error);
-            } else if (callback) callback(JSON.parse(body));
+            } else if (callback) 
+				try{
+					callback(JSON.parse(body));
+				}catch(error){
+					if (err) err(error);
+				}
         }
     );
 };
@@ -42,7 +47,13 @@ export function jsonCallPost(url: string, cookie: null | string, args: object, c
         function (error, response, body) {
             if (error || response.statusCode != 200) {
                 if (err) err(error);
-            } else if (callback) callback(JSON.parse(body));
+            } else if (callback) {
+				try{
+					callback(JSON.parse(body));
+				}catch(error){
+					if (err) err(error);
+				}
+			}
         }
     );
 };
