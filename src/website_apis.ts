@@ -82,7 +82,7 @@ export function registerApis(app: express.Application) {
         });
     });
     app.get('/export_list', function (req, response) {
-        var query = { "_id": req.query["id"] };
+        var query = { "_id": database.Database.getID(req.query["id"]) };
         new database.Database(function (db) {
             db.find("sharelist", query, function (res) {
                 if (res.length == 0) {
@@ -105,7 +105,7 @@ export function registerApis(app: express.Application) {
         });
     });
     app.post('/apply', function (req, response) {
-        var query = { "_id": req.body["id"] };
+        var query = { "_id": database.Database.getID(req.body["id"]) };
         new database.Database(function (db) {
             db.find("sharelist", query, function (res) {
                 if (res.length == 0) {
@@ -131,7 +131,7 @@ export function registerApis(app: express.Application) {
                     closeDB();
                     return;
                 }
-                var query = { "_id": req.body["id"] };
+                var query = { "_id": database.Database.getID(req.body["id"]) };
                 db.find("sharelist", query, function (res) {
                     let newComment = { "uid": uid, "content": req.body["content"], "like": req.body["like"] == "1" };
                     db.updateOne("sharelist", query, { $push: { "comments": newComment } }, {}, closeDB);
@@ -257,7 +257,7 @@ export function registerApis(app: express.Application) {
                     });
                     return;
                 }
-                db.deleteOne("sharelist", { _id: req.query["id"] }, function (r) {
+                db.deleteOne("sharelist", { _id: database.Database.getID(req.query["id"]) }, function (r) {
                     response.redirect("remove");
                     db.close();
                 });
