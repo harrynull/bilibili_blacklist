@@ -5,23 +5,48 @@
     <title>Bilibili 屏蔽词分享平台</title>
     <%- include("template/head"); %>
     <style>
-        body { padding-bottom: 20px; }
-        .comment { margin: 20px; }
-        .container{ padding: 0 10%; }
-        .item{ padding: 30px 5px; border-bottom:1px solid #777; }
-        .item:hover{ background-color:#EEE; }
-        .token a { color: #777; }
-        .sharelist_item{padding:2em;}
-        h2{font-size:2em;}
+        body {
+            padding-bottom: 20px;
+        }
+
+        .comment {
+            margin: 20px;
+        }
+
+        .container {
+            padding: 0 10%;
+        }
+
+        .item {
+            padding: 30px 5px;
+            border-bottom: 1px solid #777;
+        }
+
+        .item:hover {
+            background-color: #EEE;
+        }
+
+        .token a {
+            color: #777;
+        }
+
+        .sharelist_item {
+            padding: 2em;
+        }
+
+        h2 {
+            font-size: 2em;
+        }
     </style>
-    <link href="https://cdnjs.loli.net/ajax/libs/bootstrap-tokenfield/0.12.0/css/bootstrap-tokenfield.min.css" rel="stylesheet">
+    <link href="https://cdnjs.loli.net/ajax/libs/bootstrap-tokenfield/0.12.0/css/bootstrap-tokenfield.min.css"
+        rel="stylesheet">
     <link href="https://cdnjs.loli.net/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" rel="stylesheet">
 
 </head>
 
 <body>
     <div id="main-container">
-		<%- include("template/header"); %>
+        <%- include("template/header"); %>
         <div class="jumbotron">
             <div class="container">
                 <h1>Bilibili 屏蔽词分享平台</h1>
@@ -33,23 +58,30 @@
         <div class="container">
             <h2>分享列表 <a href="submit.html" class="btn btn-success" style="float:right;margin-right:15px">提交屏蔽词包</a></h2>
             <hr>
-            按标签筛选： <div style="display:inline-block;"><input type="text" class="form-control" id="tags" style="width:20em;" /></div>
+            按标签筛选： <div style="display:inline-block;"><input type="text" class="form-control" id="tags"
+                    style="width:20em;" /></div>
             排序：<div class="btn-group" role="group" aria-label="...">
-                <button type="button" :class="'btn btn-'+(sortBy=='usage'?'primary':'secondary')" v-on:click="sortByUsage()">使用量</button>
-                <button type="button" :class="'btn btn-'+(sortBy=='time'?'primary':'secondary')" v-on:click="sortByDate()">发布时间</button>
+                <button type="button" :class="'btn btn-'+(sortBy=='usage'?'primary':'secondary')"
+                    v-on:click="sortByUsage()">使用量</button>
+                <button type="button" :class="'btn btn-'+(sortBy=='time'?'primary':'secondary')"
+                    v-on:click="sortByDate()">发布时间</button>
             </div>
 
             <ul class="list-group" style="margin-top:2em" id="sharelist">
                 <li v-for="item in sharelist.data" class="list-group-item sharelist_item" v-if="item.filters[0]">
-                    <p><a href="javascript:void(0)" v-on:click="detail(item._id)">{{item.name}}</a> <span style="margin-left:1em"></span><span
-                            v-for="tag in item.tags" class="badge badge-primary" style="margin:0 2px">{{tag}}</span></p>
+                    <p><a href="javascript:void(0)" v-on:click="detail(item._id)">{{item.name}}</a> <span
+                            style="margin-left:1em"></span><span v-for="tag in item.tags" class="badge badge-primary"
+                            style="margin:0 2px">{{tag}}</span></p>
                     <p><span class="glyphicon glyphicon-star" aria-hidden="true"></span> {{calcVoteDisplay(item)}} |
                         {{item.usage}} 次使用 {{['| 几乎不误伤','| 可能轻微误伤','| 可能严重误伤'][item['safe-level']]}}</p>
                     <p>{{item.description}}</p>
                     <p style="color:#aaa">{{filters_preview(item.filters)}}</p>
-                    <a href="javascript:void(0)" v-on:click="detail(item._id)" class="btn btn-info" style="width:6em;margin-right:1em;">查看</a>
-                    <a href="javascript:void(0)" v-on:click="apply(item._id)" class="btn btn-primary" :disabled="apply_status[item._id]"
-                        style="width:6em;">应用</a></th>
+                    <a href="javascript:void(0)" v-on:click="detail(item._id)" class="btn btn-info"
+                        style="width:6em;margin-right:1em;">查看</a>
+                    <a href="javascript:void(0)" v-on:click="apply(item._id)" class="btn btn-primary"
+                        :disabled="apply_status[item._id]" style="width:6em;">应用</a>
+                    <a href="javascript:void(0)" v-on:click="export_list(item._id)" class="btn btn-primary"
+                        style="width:6em;margin-left:1em">导出</a>
                 </li>
             </ul>
             <nav aria-label="Page navigation" style="margin: 2em">
@@ -59,8 +91,8 @@
                             <span aria-hidden="true">&laquo;</span>
                         </a>
                     </li>
-                    <li v-for="i in pagination_pages()" class="page-item" v-bind:class="{ active: page==i-1 }"><a class="page-link"
-                            href="#sharelist" v-on:click="goto_page(i-1)">{{i}}</a></li>
+                    <li v-for="i in pagination_pages()" class="page-item" v-bind:class="{ active: page==i-1 }"><a
+                            class="page-link" href="#sharelist" v-on:click="goto_page(i-1)">{{i}}</a></li>
                     <li class="page-item" v-if="page+1!=sharelist.last_page">
                         <a class="page-link" href="#" aria-label="Next" v-on:click="goto_page(page+1)">
                             <span aria-hidden="true">&raquo;</span>
@@ -80,7 +112,9 @@
                             </button>
                         </div>
                         <div class="modal-body">
-                            <p style="color:#777">{{getTime(detailjson["time"])}} | 作者: <a :href="'https://space.bilibili.com/'+detailjson['uid']">{{detailjson["uid"]}}</a></p>
+                            <p style="color:#777">{{getTime(detailjson["time"])}} | 作者: <a
+                                    :href="'https://space.bilibili.com/'+detailjson['uid']">{{detailjson["uid"]}}</a>
+                            </p>
                             <p>{{detailjson["usage"]}} 次使用</p>
                             <p v-if="detailjson['tags']">Tags: {{detailjson["tags"].join(', ')}}</p>
                             <p v-if="detailjson['safe-level']">误伤程度：
@@ -100,9 +134,12 @@
                             </table>
                             <p>评论：</p>
                             <div class="comments">
-                                <div class="comment" v-for="comment in detailjson['comments']" v-if="comment.content!=''">
-                                    <span :class="'glyphicon glyphicon-thumbs-'+(comment.like?'up': (comment.like===false?'down':'') )"
-                                        aria-hidden="true"></span> <a :href="'https://space.bilibili.com/'+comment.uid">{{comment.uid}}</a>:
+                                <div class="comment" v-for="comment in detailjson['comments']"
+                                    v-if="comment.content!=''">
+                                    <span
+                                        :class="'glyphicon glyphicon-thumbs-'+(comment.like?'up': (comment.like===false?'down':'') )"
+                                        aria-hidden="true"></span> <a
+                                        :href="'https://space.bilibili.com/'+comment.uid">{{comment.uid}}</a>:
                                     {{comment.content}}</div>
                             </div>
                             <div class="row">
@@ -122,7 +159,10 @@
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-success" v-on:click="apply(detailid)" s:disabled="apply_status[detailid]!=undefined">{{apply_status[detailid]==undefined?"应用":"已应用"}}</button>
+                            <button type="button" class="btn btn-success" v-on:click="apply(detailid)"
+                                s:disabled="apply_status[detailid]!=undefined">{{apply_status[detailid]==undefined?"应用":"已应用"}}</button>
+                            <a href="javascript:void(0)" v-on:click="export_list(item._id)" class="btn btn-primary"
+                                style="width:6em;">导出</a>
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
                         </div>
                     </div>
@@ -174,7 +214,8 @@
 
         <footer>
             <div style="text-align:center; margin-top:2em">
-                <p>&copy; 2018-2019 <a href="https://harrynull.tech">Harry Yu</a>. Licensed under MIT License. <a href="https://github.com/abc612008/bilibili_blacklist">Contribute
+                <p>&copy; 2018-2019 <a href="https://harrynull.tech">Harry Yu</a>. Licensed under MIT License. <a
+                        href="https://github.com/abc612008/bilibili_blacklist">Contribute
                         to it</a>.</p>
             </div>
         </footer>
