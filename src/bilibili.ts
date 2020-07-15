@@ -5,7 +5,7 @@ type JSONCallback = ((result: any) => void) | null;
 type ErrorCallback = ((error: any) => void) | null;
 type APICallback = ((isSuccess: boolean, resultOrError: any) => void) | null;
 
-enum FilterType {
+export enum FilterType {
     Normal, Regex, User
 }
 

@@ -7,15 +7,15 @@ import NodeCache = require("node-cache");
 const cache = new NodeCache();
 const AdminUID = -1;
 
-function sharelist_filter(list: interfaces.UserBlacklist, filter: number){
+function sharelist_filter(list: interfaces.UserBlacklist, filter: number) {
     var ret: interfaces.UserBlacklist = {};
-    if(filter == 0) return list;
-    for (let key in list) if(list[key]>=filter) ret[key] = list[key];
+    if (filter == 0) return list;
+    for (let key in list) if (list[key] >= filter) ret[key] = list[key];
     return ret;
 }
 
 
-function fetch_user_sharelist(db: database.Database, filter: number, callback: ((res: object) => void)){
+function fetch_user_sharelist(db: database.Database, filter: number, callback: ((res: object) => void)) {
 
     var value: object | undefined = cache.get("user_sharelist_" + filter);
     if (value == undefined) {
@@ -43,9 +43,7 @@ function fetch_user_sharelist(db: database.Database, filter: number, callback: (
     } else {
         callback(value);
     }
-
 }
-
 
 export function registerApis(app: express.Application) {
     app.get('/fetch_sharelist', function (req, response) {
@@ -83,8 +81,31 @@ export function registerApis(app: express.Application) {
             });
         });
     });
+    app.get('/export_list', function (req, response) {
+        var query = { "_id": req.query["id"] };
+        new database.Database(function (db) {
+            db.find("sharelist", query, function (res) {
+                if (res.length == 0) {
+                    response.json({ "code": -1, "message": "invalid id" });
+                    db.close();
+                    return;
+                }
+                var data = "<filters>\n"
+                for (var id in res[0]["filters"]) {
+                    let filter = res[0]["filters"][id]
+                    data += "<item enabled=\"true\">"
+                    data += (filter.type == bilibili.FilterType.Normal ? "t=" : (filter.type == bilibili.FilterType.Regex ? "r=" : "u="))
+                    data += filter.filter
+                    data += "</item>\n"
+                }
+                data += "</filters>"
+                db.updateOne("sharelist", query, { $inc: { "usage": 1 } }, {}, function () { db.close() });
+                response.json({ "code": 0, "message": "success", "data": data });
+            });
+        });
+    });
     app.post('/apply', function (req, response) {
-        var query = { "_id": database.Database.getID(req.body["id"]) };
+        var query = { "_id": req.body["id"] };
         new database.Database(function (db) {
             db.find("sharelist", query, function (res) {
                 if (res.length == 0) {
@@ -110,7 +131,7 @@ export function registerApis(app: express.Application) {
                     closeDB();
                     return;
                 }
-                var query = { "_id": database.Database.getID(req.body["id"]) };
+                var query = { "_id": req.body["id"] };
                 db.find("sharelist", query, function (res) {
                     let newComment = { "uid": uid, "content": req.body["content"], "like": req.body["like"] == "1" };
                     db.updateOne("sharelist", query, { $push: { "comments": newComment } }, {}, closeDB);
@@ -193,11 +214,11 @@ export function registerApis(app: express.Application) {
         var filter = parseInt(req.query["filter"]);
         new database.Database(function (db) {
             db.find("user_sharelist", { "uid": uid }, function (r) { // validate uid first
-                if (r.length == 0&&false){
+                if (r.length == 0 && false) {
                     response.json({ "code": -2, "message": "Need to share first." });
                     return;
                 }
-                fetch_user_sharelist(db, filter, function(res){response.json(res);});                
+                fetch_user_sharelist(db, filter, function (res) { response.json(res); });
             });
         });
     });
@@ -236,7 +257,7 @@ export function registerApis(app: express.Application) {
                     });
                     return;
                 }
-                db.deleteOne("sharelist", { _id: database.Database.getID(req.query["id"]) }, function (r) {
+                db.deleteOne("sharelist", { _id: req.query["id"] }, function (r) {
                     response.redirect("remove");
                     db.close();
                 });

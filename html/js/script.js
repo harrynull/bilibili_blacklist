@@ -16,6 +16,7 @@ var app = new Vue({
     apply_status: {},
     vote_choice: -1,
     tip: document.cookie.indexOf('tip=') != -1,
+    tipExport: document.cookie.indexOf('tip_export=') != -1,
     sortBy: 'usage',
     page: 0,
   },
@@ -46,6 +47,29 @@ var app = new Vue({
         this.tipIfNeeded();
       }, response => {
         console.log("Failed to fetch blacklist")
+      });
+    },
+    save: function(filename, data) {
+      var blob = new Blob([data], {type: 'text'});
+      if(window.navigator.msSaveOrOpenBlob) {
+          window.navigator.msSaveBlob(blob, filename);
+      }
+      else{
+          var elem = window.document.createElement('a');
+          elem.href = window.URL.createObjectURL(blob);
+          elem.download = filename;        
+          document.body.appendChild(elem);
+          elem.click();        
+          document.body.removeChild(elem);
+      }
+    },
+    export_list: function (id) {
+      this.$http.get('export_list?id='+id).then(response => {
+        this.save("blacklist_"+id+".xml", response.body.data);
+        this.exportTipIfNeeded();
+      }, response => {
+        console.log("Failed to fetch export_list");
+        console.log(response);
       });
     },
     removeItem: function (id) {
@@ -111,6 +135,16 @@ var app = new Vue({
         document.cookie = "tip=1; expires=" + date.toGMTString();
 
         alert("修改成功，请打开任意一个B站视频，点击播放器右侧【屏蔽设定】里的【同步屏蔽列表】以生效修改！");
+      }
+    },
+    exportTipIfNeeded: function () {
+      if (!this.tipExport) {
+        this.tipExport = true;
+        var date = new Date();
+        date.setTime(date.getTime + 12 * 30 * 24 * 3600 * 1000);
+        document.cookie = "tip_export=1; expires=" + date.toGMTString();
+
+        alert("导出成功，请打开任意一个B站视频，点击播放器右侧【屏蔽设定】，右键任何屏蔽词选择【导入xml文件】");
       }
     },
     calcVote: function (item) {
