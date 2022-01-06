@@ -13,9 +13,9 @@ RUN	apt-get update && \
 	chmod 777 /usr/local/bin/entrypoint.sh && \
 	apt-get install tzdata npm git mongodb wget -y && \
 	service mongodb start && \
-	git clone https://ghproxy.com/https://github.com/harrynull/bilibili_blacklist.git && \
+	git clone https://github.com/harrynull/bilibili_blacklist.git && \
 	cd bilibili_blacklist && \
-	wget http://harrynull.tech/bilibili/fetch_sharelist && \
+	wget https://harrynull.tech/bilibili/fetch_sharelist && \
 	mv fetch_sharelist fetch_sharelist.json && \
 	npm install && \
 	mongoimport --db bilibili_blacklist --collection sharelist --file fetch_sharelist.json --jsonArray 
