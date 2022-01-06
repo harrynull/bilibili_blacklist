@@ -16,7 +16,7 @@
 
 Bilibili的弹幕环境是众所周知的不尽人意，而其自带的弹幕屏蔽系统虽然支持正则，但是普通用户难以编写，虽然网上已经有类似的屏蔽词列表，如[Bilibili-Block-List](https://github.com/jnxyp/Bilibili-Block-List)，[bili_blocklist](http://git.oschina.net/lbroot/bili_blocklist/)，[bilibili-ban-list](https://github.com/xmcp/bilibili-ban-list)等，但是由于每个人的接受能力和制作者的主观性，导致一些“误伤”的情况，例如，有的人觉得“233”是烘托气氛的弹幕，有的人觉得是无意义的刷屏弹幕。此外，操作也较为复杂，多需要手动导入xml。于是，我便想制作这样一个平台，可以让用户方便的选择自己需要屏蔽的弹幕的类型，做到按需屏蔽、一键屏蔽，在一定程度上缓解B站弹幕质量问题。
 
-## 搭建
+## 本地搭建
 
 1. clone源码
 2. ``npm install``
@@ -41,6 +41,18 @@ mongoimport --db bilibili_blacklist --collection sharelist --file fetch_sharelis
 如果您是普通用户，您可以直接使用上方的演示站。
 
 如果您是开发者，欢迎用上方的方法自行搭建，然后访问http://localhost:8000进行操作。
+
+
+## Docker搭建
+1. 安装好[Docker](https://yeasy.gitbooks.io/docker_practice/content/install/)
+2. 本地编译
+```shell
+docker build -t bilibili-blacklist .
+```
+3. 运行
+```shell
+docker run -d --restart=always --name=bilibili-blacklist -p 8000:8000 bilibili-blacklist
+```
 
 ## 原理
 
