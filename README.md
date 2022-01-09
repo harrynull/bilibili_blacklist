@@ -46,10 +46,11 @@ mongoimport --db bilibili_blacklist --collection sharelist --file fetch_sharelis
 ## Docker搭建
 1. 安装好[Docker](https://yeasy.gitbooks.io/docker_practice/content/install/)
 2. 本地编译
+3. 下载源码
 ```shell
 docker build -t bilibili-blacklist .
 ```
-3. 运行
+4. 运行
 ```shell
 docker run -d --restart=always --name=bilibili-blacklist -p 8000:8000 bilibili-blacklist
 ```
