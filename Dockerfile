@@ -3,9 +3,9 @@ ENV TZ=Asia/Shanghai
 ARG DEBIAN_FRONTEND=noninteractive
 
 
-WORKDIR /home
-#       sed -i s/archive.ubuntu.com/mirrors.aliyun.com/g /etc/apt/sources.list && \
-#	sed -i s/security.ubuntu.com/mirrors.aliyun.com/g /etc/apt/sources.list && \
+WORKDIR /home/bilibili_blacklist
+COPY ./ /home/bilibili_blacklist
+
 RUN	apt-get update && \
 	touch entrypoint.sh && \
 	echo '#!/bin/bash \n cd /home/bilibili_blacklist;service mongodb start;npm run build && node .' >> entrypoint.sh && \
@@ -13,8 +13,6 @@ RUN	apt-get update && \
 	chmod 777 /usr/local/bin/entrypoint.sh && \
 	apt-get install tzdata npm git mongodb wget -y && \
 	service mongodb start && \
-	git clone https://github.com/harrynull/bilibili_blacklist.git && \
-	cd bilibili_blacklist && \
 	wget https://harrynull.tech/bilibili/fetch_sharelist && \
 	mv fetch_sharelist fetch_sharelist.json && \
 	npm install && \
