@@ -25,33 +25,45 @@ function storeToken(uid: string, token: string) {
 }
 
 /**
- * 从Bilibili获取OAuthKey
- * OAuthKey示例: {"data":{"url":"https://passport.bilibili.com/qrcode/h5/login?oauthKey=...","oauthKey":"..."}}
- * 
- * @param {(OAuthKey: string)=>void} callback the callback
+ * 从Bilibili获取登录二维码 (x/passport-login/web/qrcode/generate; the old qrcode/getLoginUrl API is retired)
+ * 返回 {"url": "https://account.bilibili.com/h5/account-h5/auth/scan-web?...&qrcode_key=...", "oauthKey": "<qrcode_key>"}
+ *
+ * @param {(OAuthKey: object | null) => void} callback the callback
  */
-function getOAuthKey(callback: (OAuthKey: string | null) => void) {
-    bilibili.jsonCall("https://passport.bilibili.com/qrcode/getLoginUrl", null,
+function getOAuthKey(callback: (OAuthKey: object | null) => void) {
+    bilibili.jsonCall("https://passport.bilibili.com/x/passport-login/web/qrcode/generate", null,
         function (res) {
-            callback(res["data"]);
+            const data = res && res["data"];
+            if (!data || !data["qrcode_key"]) { console.log("[Error][Login] Unexpected qrcode/generate response: " + JSON.stringify(res)); callback(null); return; }
+            callback({ "url": data["url"], "oauthKey": data["qrcode_key"] });
         }, function (err) {
             console.log("[Error][Login] Failed to get OAuthKey");
             callback(null);
         });
 }
 
+// x/passport-login/web/qrcode/poll status codes, mapped to the codes the front end already understands
+const POLL_STATUS: { [code: number]: number } = {
+    86101: -4,  // 未扫码 (not scanned yet)
+    86090: -5,  // 已扫码未确认 (scanned, waiting for confirmation on the phone)
+    86038: -2,  // 二维码已失效 (expired)
+};
 
 /**
- * 从Bilibili获取OAuthKey的验证状态
- * status示例：-4(Can't scan~), -2(Can't Match oauthKey~), (Scanning) -5(Can't confirm~), (成功) {"url": "https://passport.biligame.com/crossDomain?DedeUserID=...&DedeUserID__ckMd5=...&Expires=84600&SESSDATA=...&bili_jct=...&gourl=http%3A%2F%2Fwww.bilibili.com"}
- * 
- * @param {string} oauthkey 要验证的oauthkey,
- * @param {((status: number|object)=>void)} callback callback
+ * 从Bilibili获取二维码的扫描状态 (x/passport-login/web/qrcode/poll)
+ * 返回: -4 未扫码, -5 已扫码未确认, -2 已失效, -1 其它错误,
+ * 或成功时 {"url": "https://passport.biligame.com/x/passport-login/web/crossDomain?DedeUserID=...&DedeUserID__ckMd5=...&Expires=...&SESSDATA=...&bili_jct=...&gourl=..."}
+ *
+ * @param {string} oauthkey 要验证的 qrcode_key
+ * @param {((status: number|object|null)=>void)} callback callback
  */
 function getLoginInfo(oauthkey: string, callback: (status: number | object | null) => void) {
-    bilibili.jsonCallPost("https://passport.bilibili.com/qrcode/getLoginInfo", null, { "oauthKey": oauthkey },
+    bilibili.jsonCall("https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=" + encodeURIComponent(oauthkey || ""), null,
         function (res) {
-            callback(res["data"]);
+            const data = res && res["data"];
+            if (!data) { console.log("[Error][Login] Unexpected qrcode/poll response: " + JSON.stringify(res)); callback(-1); return; }
+            if (data["code"] === 0 && data["url"]) callback({ "url": data["url"] });
+            else callback(POLL_STATUS[data["code"]] !== undefined ? POLL_STATUS[data["code"]] : -1);
         }, function (err) {
             console.log("[Error][Login] Failed to get login info");
             callback(null);
