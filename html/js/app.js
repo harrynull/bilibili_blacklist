@@ -194,7 +194,7 @@ const app = createApp({
 <header class="site-header">
   <div class="shell">
     <a class="brand" href="#/">
-      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="#1b1a27"/><rect x="5" y="8" width="13" height="3" rx="1.5" fill="#fff"/><rect x="9" y="13.5" width="14" height="3" rx="1.5" fill="#fff" opacity=".55"/><rect x="5" y="19" width="10" height="3" rx="1.5" fill="#fff"/><rect x="7.5" y="13.4" width="17" height="3.2" rx="1" fill="#ffd23f"/></svg>
+      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="#2c4a85"/><rect x="5" y="8" width="13" height="3" rx="1.5" fill="#fff"/><rect x="9" y="13.5" width="14" height="3" rx="1.5" fill="#fff" opacity=".55"/><rect x="5" y="19" width="10" height="3" rx="1.5" fill="#fff"/><rect x="7.5" y="13.4" width="17" height="3.2" rx="1" fill="#ffd23f"/></svg>
       <span>B站屏蔽词分享</span>
     </a>
     <button class="btn icon ghost menu-toggle" :aria-expanded="menuOpen" aria-controls="site-nav" @click="menuOpen = !menuOpen" v-html="icons.menu" aria-label="菜单"></button>
@@ -251,7 +251,7 @@ app.component('danmaku-screen', {
 
         function geometry() {
             const el = lanesEl.value; const width = (el && el.clientWidth) || 640;
-            const font = 15;
+            const font = 16;
             return { width, font };
         }
         function makeItem(lane, startX) {
@@ -365,13 +365,13 @@ app.component('home-view', {
             applied, applyPack, exportPack, fmt, ratingText, safetyOf, cleanTags, preview, session, detailHref, votes };
     },
     template: `
-<div class="shell">
+<div class="top-band"><div class="shell">
   <section class="strip" aria-label="弹幕示意"><danmaku-screen /></section>
   <p class="intro">
     <span>大家整理的 B 站弹幕屏蔽词。点“应用”会写进你的 B 站账号，不想登录也可以导出 XML，在播放器里手动导入。</span>
     <a href="#/submit">分享我的屏蔽词</a>
   </p>
-</div>
+</div></div>
 
 <section class="section" ref="browse" id="browse">
   <div class="shell">
