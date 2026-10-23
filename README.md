@@ -18,21 +18,29 @@ Bilibili的弹幕环境是众所周知的不尽人意，而其自带的弹幕屏
 
 ## 本地搭建
 
+需要 Node.js 22.13 或更高版本（使用 Node 内置的 SQLite，无需安装数据库）。
+
 1. clone源码
 2. ``npm install``
-3. 安装[mongodb](https://www.mongodb.com/download-center?jmp=nav).
-4. ``npm run build && node .``
+3. ``npm run build && node .``
+
+数据保存在 ``bilibili_blacklist.db``（可用环境变量 ``SQLITE_PATH`` 修改路径）。
 
 从已有网站导入分享数据：
 
     GET /fetch_sharelist 即可获得sharelist数据库的内容。
     GET /tags 即可获得tags。
 
-​	例如：http://harrynull.tech/bilibili/fetch_sharelist。
+​	例如：https://harrynull.tech/bilibili/fetch_sharelist。
 
 导入示例：
 ```shell
-mongoimport --db bilibili_blacklist --collection sharelist --file fetch_sharelist.json --jsonArray
+npm run migrate -- --from-json https://harrynull.tech/bilibili/fetch_sharelist
+```
+
+从旧版（MongoDB）迁移：
+```shell
+npm run migrate -- --from-mongo mongodb://localhost:27017/bilibili_blacklist
 ```
 
 
@@ -45,14 +53,13 @@ mongoimport --db bilibili_blacklist --collection sharelist --file fetch_sharelis
 
 ## Docker搭建
 1. 安装好[Docker](https://yeasy.gitbooks.io/docker_practice/content/install/)
-2. 本地编译
-3. 下载源码
+2. 下载源码并本地编译
 ```shell
 docker build -t bilibili-blacklist .
 ```
-4. 运行
+3. 运行（数据保存在 ``bilibili-data`` 卷中；首次启动时会自动从演示站导入分享数据，设置 ``-e SEED_URL=`` 可跳过）
 ```shell
-docker run -d --restart=always --name=bilibili-blacklist -p 8000:8000 bilibili-blacklist
+docker run -d --restart=always --name=bilibili-blacklist -p 8000:8000 -v bilibili-data:/data bilibili-blacklist
 ```
 
 ## 原理

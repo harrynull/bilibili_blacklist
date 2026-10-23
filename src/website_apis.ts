@@ -63,22 +63,17 @@ export function registerApis(app: express.Application) {
         let query = req.query["filter"] ? { tags: { $in: req.query["filter"].split(',') } } : {};
         if (!page) page = 0;
         new database.Database(function (db) {
-            let collection = db.getRawDb().collection("sharelist");
-            collection.countDocuments(query, function (error, count) {
-                let cursor = collection.find(query);
-                if (sort && dir) cursor = cursor.sort(sort, dir);
-                cursor.limit(per_page).skip(page * per_page).toArray(function (err, res) {
-                    response.json(
-                        {
-                            "total": count,
-                            "per_page": per_page,
-                            "current_page": page,
-                            "last_page": Math.ceil(count / per_page),
-                            "data": res
-                        }
-                    );
-                    db.close();
-                });
+            db.findPage("sharelist", query, sort && dir ? sort : undefined, dir, page * per_page, per_page, function (res) {
+                response.json(
+                    {
+                        "total": res.total,
+                        "per_page": per_page,
+                        "current_page": page,
+                        "last_page": Math.ceil(res.total / per_page),
+                        "data": res.data
+                    }
+                );
+                db.close();
             });
         });
     });

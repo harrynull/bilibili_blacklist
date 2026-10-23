@@ -58,3 +58,8 @@ typings/
 .env
 
 build/
+
+# SQLite database
+*.db
+*.db-shm
+*.db-wal
