@@ -5,7 +5,15 @@ const { createApp, reactive, ref, computed, watch, onMounted, onBeforeUnmount, n
 
 /* ------------------------------------------------------------------ helpers */
 
+const SITE_TITLE = 'B站弹幕屏蔽词分享平台';
+const VIEW_TITLES = { 'home-view': '', 'users-view': '用户黑名单', 'mine-view': '我的屏蔽', 'submit-view': '分享屏蔽词包', 'login-view': '登录', 'not-found': '页面不存在' };
 const TYPE_LABEL = ['文本', '正则', '用户'];
+const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+// overlays remember what had focus when they opened and hand it back when they close
+function rememberFocus() {
+    const el = document.activeElement;
+    return () => requestAnimationFrame(() => { if (el && el.isConnected && el !== document.body) el.focus({ preventScroll: true }); });
+}
 const SAFETY = [
     { label: '几乎不误伤', cls: 'safe-0', hint: '只会挡掉目标弹幕' },
     { label: '可能轻微误伤', cls: 'safe-1', hint: '偶尔挡掉正常弹幕' },
@@ -22,6 +30,8 @@ const icons = {
     up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 21H4V10h3zM7 10l4.5-7a2.2 2.2 0 0 1 2.9 2.6L13.5 9H19a2 2 0 0 1 2 2.3l-1.2 7.6A2.5 2.5 0 0 1 17.3 21H7"/></svg>',
     down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M17 3h3v11h-3zM17 14l-4.5 7a2.2 2.2 0 0 1-2.9-2.6L10.5 15H5a2 2 0 0 1-2-2.3l1.2-7.6A2.5 2.5 0 0 1 6.7 3H17"/></svg>',
     x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>',
+    play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 6.5v11l9-5.5z"/></svg>',
 };
 
 function readCookie(name) {
@@ -121,10 +131,13 @@ parseHash();
 
 const toasts = reactive([]);
 let toastSeq = 0;
+// errors and toasts that offer an action (undo) stay until dismissed; plain confirmations fade on their own
+function dismissToast(t) { const i = toasts.indexOf(t); if (i >= 0) toasts.splice(i, 1); }
 function toast(text, opts) {
-    const t = Object.assign({ id: ++toastSeq, text, kind: 'ok', sub: '' }, opts || {});
+    const t = Object.assign({ id: ++toastSeq, text, kind: 'ok', sub: '', action: null, key: null }, opts || {});
+    if (t.key) toasts.filter(x => x.key === t.key).forEach(dismissToast);
     toasts.push(t);
-    setTimeout(() => { const i = toasts.indexOf(t); if (i >= 0) toasts.splice(i, 1); }, t.sub ? 6000 : 3500);
+    if (t.kind !== 'err' && !t.action) setTimeout(() => dismissToast(t), t.sub ? 6000 : 3500);
 }
 const fail = (what, e) => toast(what + '失败', { kind: 'err', sub: e && e.message === 'HTTP 404' ? '找不到这个屏蔽词包' : '请检查网络后重试' });
 
@@ -186,24 +199,33 @@ const app = createApp({
             if (router.path === '/' || detailId.value) return 'home-view';
             return ({ '/users': 'users-view', '/mine': 'mine-view', '/submit': 'submit-view', '/login': 'login-view' })[router.path] || 'not-found';
         });
-        watch(view, () => window.scrollTo(0, 0));
+        // client-side route changes reset nothing: retitle the document and move focus to the new view
+        const mainEl = ref(null);
+        watch(view, (v, old) => {
+            document.title = (VIEW_TITLES[v] ? VIEW_TITLES[v] + ' | ' : '') + SITE_TITLE;
+            window.scrollTo(0, 0);
+            if (old) nextTick(() => mainEl.value && mainEl.value.focus({ preventScroll: true }));
+        }, { immediate: true });
+        // while a drawer or dialog is open, everything behind it is inert (no tabbing out of the overlay)
+        const backgroundInert = computed(() => !!detailId.value || !!dialog.name);
         const isActive = p => (p === '/' ? view.value === 'home-view' : router.path === p);
-        return { session, menuOpen, view, detailId, isActive, logout, icons };
+        return { session, menuOpen, view, detailId, isActive, logout, icons, mainEl, backgroundInert };
     },
     template: `
-<header class="site-header">
+<a class="skip-link" href="#main" @click.prevent="mainEl.focus()" :inert="backgroundInert">跳到正文</a>
+<header class="site-header" :inert="backgroundInert">
   <div class="shell">
     <a class="brand" href="#/">
       <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="#2c4a85"/><rect x="5" y="8" width="13" height="3" rx="1.5" fill="#fff"/><rect x="9" y="13.5" width="14" height="3" rx="1.5" fill="#fff" opacity=".55"/><rect x="5" y="19" width="10" height="3" rx="1.5" fill="#fff"/><rect x="7.5" y="13.4" width="17" height="3.2" rx="1" fill="#ffd23f"/></svg>
       <span>B站屏蔽词分享</span>
     </a>
     <button class="btn icon ghost menu-toggle" :aria-expanded="menuOpen" aria-controls="site-nav" @click="menuOpen = !menuOpen" v-html="icons.menu" aria-label="菜单"></button>
-    <nav id="site-nav" class="nav" :class="{ open: menuOpen }">
-      <a class="nav-link" :class="{ active: isActive('/') }" href="#/">屏蔽词包</a>
-      <a class="nav-link" :class="{ active: isActive('/users') }" href="#/users">用户黑名单</a>
-      <a class="nav-link" :class="{ active: isActive('/mine') }" href="#/mine">我的屏蔽</a>
+    <nav id="site-nav" class="nav" :class="{ open: menuOpen }" aria-label="主导航">
+      <a class="nav-link" :class="{ active: isActive('/') }" :aria-current="isActive('/') ? 'page' : null" href="#/">屏蔽词包</a>
+      <a class="nav-link" :class="{ active: isActive('/users') }" :aria-current="isActive('/users') ? 'page' : null" href="#/users">用户黑名单</a>
+      <a class="nav-link" :class="{ active: isActive('/mine') }" :aria-current="isActive('/mine') ? 'page' : null" href="#/mine">我的屏蔽</a>
       <span class="divider" role="presentation"></span>
-      <a class="btn secondary small" href="#/submit">提交屏蔽词包</a>
+      <a class="btn secondary small" href="#/submit">分享屏蔽词包</a>
       <span class="divider" role="presentation"></span>
       <span v-if="session.loggedIn" class="account">
         <span>UID {{ session.uid }}</span>
@@ -213,14 +235,14 @@ const app = createApp({
     </nav>
   </div>
 </header>
-<main>
+<main id="main" ref="mainEl" tabindex="-1" :inert="backgroundInert">
   <component :is="view" />
 </main>
 <detail-panel v-if="detailId" :id="detailId" />
-<footer class="site-footer">
+<footer class="site-footer" :inert="backgroundInert">
   <div class="shell">
     <span>非哔哩哔哩官方网站，与哔哩哔哩无关。屏蔽词包以 CC0 协议发布。</span>
-    <nav>
+    <nav aria-label="页脚">
       <a href="eula.html">用户协议与问答</a>
       <a href="licenses.html">开源许可</a>
       <a href="https://github.com/harrynull/bilibili_blacklist" rel="noopener">GitHub</a>
@@ -243,11 +265,27 @@ app.component('danmaku-screen', {
         const lanes = 4;
         const items = ref([]);
         const blocked = ref(0);
-        const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const reduce = reduceMotion();
         const lanesEl = ref(null);
+        const paused = ref(false);                   // the visitor's pause button (WCAG 2.2.2: moving content needs one)
+        const hidden = ref(document.hidden);
+        const frozen = computed(() => paused.value || hidden.value);
         let timer = null, seq = 0, cursor = 0;
-        const laneFree = new Array(lanes).fill(0);   // time at which the lane's entry point is clear again
+        const laneFree = new Array(lanes).fill(0);   // clock time at which the lane's entry point is clear again
         const SPEED = 130;                           // px per second, the same for every comment (like the real player)
+        // a clock that stops while paused or while the tab is hidden, so the CSS animations and the timers stay in step
+        let clock = 0, lastTick = performance.now(), sinceSpawn = 0;
+        const events = [];
+        const now = () => clock;
+        const at = (delay, fn) => events.push({ at: clock + delay, fn });
+        function tick() {
+            const t = performance.now(), dt = t - lastTick; lastTick = t;
+            if (frozen.value) return;
+            clock += dt; sinceSpawn += dt;
+            for (let i = events.length - 1; i >= 0; i--) if (events[i].at <= clock) events.splice(i, 1)[0].fn();
+            if (sinceSpawn >= 450) { sinceSpawn = 0; spawn(); }
+        }
+        const onVisibility = () => { hidden.value = document.hidden; };
 
         function geometry() {
             const el = lanesEl.value; const width = (el && el.clientWidth) || 640;
@@ -265,17 +303,16 @@ app.component('danmaku-screen', {
                 style: { top: (lane / lanes * 100) + '%', animationDuration: duration + 'ms', animationDelay: -(done * duration) + 'ms', '--travel': -travel + 'px' } };
             items.value.push(item);
             // strike blocked comments as they pass the middle of the screen
-            if (bad) setTimeout(() => { item.hit = true; blocked.value++; }, Math.max(200, (0.5 + Math.random() * 0.12 - done) * duration));
-            setTimeout(() => { items.value = items.value.filter(i => i !== item); }, (1 - done) * duration + 100);
+            if (bad) at(Math.max(200, (0.5 + Math.random() * 0.12 - done) * duration), () => { item.hit = true; blocked.value++; });
+            at((1 - done) * duration + 100, () => { items.value = items.value.filter(i => i !== item); });
             // the next comment may enter this lane once this one has fully entered plus a gap
             const clearIn = Math.max(0, (textW + 56 - startX) / SPEED * 1000);
-            laneFree[lane] = performance.now() + clearIn;
+            laneFree[lane] = now() + clearIn;
         }
         function spawn() {
-            if (!lanesEl.value || document.hidden) return;
-            const now = performance.now();
+            if (!lanesEl.value) return;
             const free = [];
-            for (let l = 0; l < lanes; l++) if (laneFree[l] <= now) free.push(l);
+            for (let l = 0; l < lanes; l++) if (laneFree[l] <= now()) free.push(l);
             if (free.length) makeItem(free[Math.floor(Math.random() * free.length)], 0);
         }
         onMounted(() => {
@@ -293,21 +330,25 @@ app.component('danmaku-screen', {
                 for (let l = 0; l < lanes; l++) {
                     if (Math.random() < 0.6) makeItem(l, width * (0.6 + Math.random() * 0.25));
                     makeItem(l, width * (0.12 + Math.random() * 0.25));
-                    laneFree[l] = Math.max(laneFree[l], performance.now() + Math.random() * 1500);
+                    laneFree[l] = Math.max(laneFree[l], now() + Math.random() * 1500);
                 }
-                timer = setInterval(spawn, 450);
+                lastTick = performance.now();
+                timer = setInterval(tick, 100);
             }));
+            document.addEventListener('visibilitychange', onVisibility);
         });
-        onBeforeUnmount(() => clearInterval(timer));
-        return { items, blocked, reduce, lanesEl, fmt };
+        onBeforeUnmount(() => { clearInterval(timer); document.removeEventListener('visibilitychange', onVisibility); });
+        return { items, blocked, reduce, lanesEl, fmt, paused, frozen, icons };
     },
     template: `
-<div class="screen" :class="{ static: reduce }" role="img" aria-label="示意：视频弹幕滚动时，命中屏蔽词的弹幕被划掉">
-  <div class="screen-lanes" ref="lanesEl">
-    <span v-for="i in items" :key="i.id" class="dm" :class="[i.color, { hit: i.hit }]" :style="i.style">{{ i.text }}</span>
+<div class="screen" :class="{ static: reduce, paused: frozen }">
+  <div class="screen-lanes" ref="lanesEl" role="img" aria-label="示意：视频弹幕滚动时，命中屏蔽词的弹幕被划掉">
+    <span v-for="i in items" :key="i.id" class="dm" :class="[i.color, { hit: i.hit }]" :style="i.style" aria-hidden="true">{{ i.text }}</span>
   </div>
-  <div class="screen-bar" aria-hidden="true">
-    <div class="screen-meta"><span>弹幕示意</span><span class="screen-count"><i></i>已划掉 {{ fmt(blocked) }} 条</span></div>
+  <div class="screen-bar">
+    <button v-if="!reduce" type="button" class="screen-btn" :aria-pressed="paused" @click="paused = !paused"><span v-html="paused ? icons.play : icons.pause"></span>{{ paused ? '继续播放' : '暂停弹幕' }}</button>
+    <span v-else class="screen-label">弹幕示意</span>
+    <span class="screen-count" aria-hidden="true"><i></i>已划掉 {{ fmt(blocked) }} 条</span>
   </div>
 </div>`,
 });
@@ -337,7 +378,8 @@ app.component('home-view', {
             } catch (e) { state.error = true; }
             state.loading = false;
         }
-        watch(() => [sort.value, page.value, tags.value.join(',')], load);
+        // a string key, so opening or closing the detail panel (which rewrites the query) doesn't reload the list
+        watch(() => sort.value + '|' + page.value + '|' + tags.value.join(','), load);
         onMounted(() => { load(); loadTags(); });
 
         function toggleTag(t) {
@@ -347,7 +389,7 @@ app.component('home-view', {
         function setTags(list) { setQuery({ tags: list.join(','), page: '' }); }
         function gotoPage(p) {
             setQuery({ page: p ? p + 1 : '' }, true);
-            nextTick(() => listTop.value && listTop.value.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+            nextTick(() => listTop.value && listTop.value.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' }));
         }
         const pages = computed(() => {
             const last = state.lastPage, cur = page.value, out = [];
@@ -369,14 +411,14 @@ app.component('home-view', {
   <section class="strip" aria-label="弹幕示意"><danmaku-screen /></section>
   <p class="intro">
     <span>大家整理的 B 站弹幕屏蔽词。点“应用”会写进你的 B 站账号，不想登录也可以导出 XML，在播放器里手动导入。</span>
-    <a href="#/submit">分享我的屏蔽词</a>
+    <a href="#/submit">分享屏蔽词包</a>
   </p>
 </div></div>
 
 <section class="section" ref="browse" id="browse">
   <div class="shell">
     <div class="section-head" ref="listTop">
-      <h2>屏蔽词包 <span class="hint" v-if="!state.loading && !state.error">{{ fmt(state.total) }} 个<span v-if="tags.length">，含任一所选标签</span></span></h2>
+      <h1>屏蔽词包 <span class="hint" v-if="!state.loading && !state.error">{{ fmt(state.total) }} 个<span v-if="tags.length">，含任一所选标签</span></span></h1>
       <div class="segmented" role="group" aria-label="排序">
         <button :aria-pressed="sort === 'usage'" @click="setQuery({ sort: '', page: '' }, true)">最多使用</button>
         <button :aria-pressed="sort === 'time'" @click="setQuery({ sort: 'time', page: '' }, true)">最新发布</button>
@@ -394,12 +436,12 @@ app.component('home-view', {
     <div class="pack-list" aria-live="polite" :aria-busy="state.loading">
       <div v-if="state.loading" class="loading">加载中…</div>
       <div v-else-if="state.error" class="empty">
-        <h3>列表没加载出来</h3>
+        <h2>列表没加载出来</h2>
         <p>可能是网络问题，稍后再试一次。</p>
         <button class="btn secondary" @click="setQuery({})">重新加载</button>
       </div>
       <div v-else-if="!state.items.length" class="empty">
-        <h3>没有带这些标签的屏蔽词包</h3>
+        <h2>没有带这些标签的屏蔽词包</h2>
         <p>换个标签试试，或者把你的屏蔽词分享出来。</p>
         <button class="btn secondary" @click="setTags([])">清除标签</button>
       </div>
@@ -409,7 +451,7 @@ app.component('home-view', {
         <li class="pack" v-for="item in state.items" :key="item._id">
           <div>
             <div class="pack-title">
-              <h3 class="pack-name"><a :href="detailHref(item._id)">{{ item.name }}</a></h3>
+              <h2 class="pack-name"><a :href="detailHref(item._id)">{{ item.name }}</a></h2>
               <span class="tags" v-if="cleanTags(item).length"><span class="tag" v-for="t in cleanTags(item)" :key="t">{{ t }}</span></span>
               <span v-if="safetyOf(item)" class="safety" :class="safetyOf(item).cls">{{ safetyOf(item).label }}</span>
             </div>
@@ -423,8 +465,8 @@ app.component('home-view', {
           <div class="pack-num"><b>{{ votes(item).total ? Math.round(votes(item).up / votes(item).total * 100) + '%' : '—' }}</b>{{ votes(item).total ? votes(item).total + ' 人' : '暂无' }}</div>
           <div class="pack-meta"><span><b>{{ fmt(item.usage) }}</b> 次使用</span><span>{{ ratingText(item) }}</span></div>
           <div class="pack-actions">
-            <button class="btn" :class="applied[item._id] ? 'done' : 'primary'" :disabled="applied[item._id]" @click="applyPack(item)">{{ applied[item._id] ? '已应用' : '应用' }}</button>
-            <button class="btn" @click="exportPack(item)">导出</button>
+            <button class="btn" :class="{ done: applied[item._id] }" :disabled="applied[item._id]" @click="applyPack(item)" :aria-label="(applied[item._id] ? '已应用 ' : '应用 ') + item.name">{{ applied[item._id] ? '已应用' : '应用' }}</button>
+            <button class="btn ghost" @click="exportPack(item)" :aria-label="'导出 ' + item.name">导出</button>
           </div>
         </li>
       </ul>
@@ -493,18 +535,21 @@ app.component('detail-panel', {
         const item = ref(null); const error = ref(false);
         const vote = ref(null); const text = ref(''); const posting = ref(false); const needVote = ref(false);
         const panel = ref(null);
+        const restoreFocus = rememberFocus();      // the list link that opened the panel
+        const prevTitle = document.title;
         async function load() {
             item.value = home.cache.find(i => i._id === props.id) || null;
             error.value = false;
             if (!item.value) {
                 try { item.value = await api.get('list', { id: props.id }); } catch (e) { error.value = true; }
             }
+            document.title = (item.value ? item.value.name : '找不到这个屏蔽词包') + ' | ' + SITE_TITLE;
         }
         watch(() => props.id, load);
         function close() { go('/', Object.fromEntries(Object.entries(router.query).filter(([k]) => ['sort', 'tags', 'page'].includes(k)))); }
         function onKey(e) { if (e.key === 'Escape' && !dialog.name) close(); }
         onMounted(() => { load(); document.addEventListener('keydown', onKey); document.body.style.overflow = 'hidden'; nextTick(() => panel.value && panel.value.focus()); });
-        onBeforeUnmount(() => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; });
+        onBeforeUnmount(() => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; document.title = prevTitle; restoreFocus(); });
 
         const comments = computed(() => (item.value && item.value.comments || []).filter(c => c.content && String(c.content).trim()));
         async function post() {
@@ -522,14 +567,14 @@ app.component('detail-panel', {
             finally { posting.value = false; }
         }
         return { item, error, close, panel, comments, vote, text, post, posting, needVote, applied, applyPack, exportPack,
-            fmt, fmtDate, votes, ratingText, safetyOf, cleanTags, TYPE_LABEL, icons };
+            fmt, fmtDate, votes, ratingText, safetyOf, cleanTags, TYPE_LABEL, icons, dialog };
     },
     template: `
 <div class="scrim" @click="close"></div>
-<aside ref="panel" tabindex="-1" class="drawer" role="dialog" aria-modal="true" :aria-label="item ? item.name : '屏蔽词包详情'">
+<div ref="panel" tabindex="-1" class="drawer" role="dialog" aria-modal="true" :aria-label="item ? item.name : '屏蔽词包详情'" :inert="!!dialog.name">
   <div class="drawer-head">
     <h2>{{ item ? item.name : (error ? '找不到这个屏蔽词包' : '加载中…') }}</h2>
-    <button class="btn icon ghost" @click="close" aria-label="关闭" v-html="icons.close"></button>
+    <button class="btn icon ghost" @click="close" aria-label="关闭详情" v-html="icons.close"></button>
   </div>
   <div class="drawer-body" v-if="error">
     <p>它可能已经被删除了。回到列表看看别的吧。</p>
@@ -551,7 +596,7 @@ app.component('detail-panel', {
     </div>
     <div class="block">
       <h3>屏蔽词 <small>{{ fmt(item.filters.length) }} 条</small></h3>
-      <div class="table-box scroll">
+      <div class="table-box scroll" tabindex="0" role="region" aria-label="全部屏蔽词">
         <table class="filter-table">
           <tr v-for="(f, i) in item.filters" :key="i">
             <td class="type"><span class="type-pill" :class="'t' + f.type">{{ TYPE_LABEL[f.type] || '文本' }}</span></td>
@@ -563,8 +608,8 @@ app.component('detail-panel', {
     <div class="block">
       <h3>评价 <small>{{ comments.length ? comments.length + ' 条' : '还没有人评价' }}</small></h3>
       <ul class="comments" v-if="comments.length">
-        <li v-for="(c, i) in comments" :key="i">
-          <span class="vote-icon" :class="c.like ? 'up' : (c.like === false ? 'down' : '')" v-html="c.like ? icons.up : (c.like === false ? icons.down : '')" :aria-label="c.like ? '有用' : (c.like === false ? '没用' : '')"></span>
+        <li v-for="(c, i) in comments" :key="i" :class="{ voted: c.like === true || c.like === false }">
+          <span v-if="c.like === true || c.like === false" class="vote-icon" :class="c.like ? 'up' : 'down'" v-html="c.like ? icons.up : icons.down" role="img" :aria-label="c.like ? '好用' : '不好用'"></span>
           <div><div class="who"><a :href="'https://space.bilibili.com/' + c.uid" target="_blank" rel="noopener">UID {{ c.uid }}</a></div>{{ c.content }}</div>
         </li>
       </ul>
@@ -585,7 +630,7 @@ app.component('detail-panel', {
     <button class="btn large" :class="applied[item._id] ? 'done' : 'primary'" :disabled="applied[item._id]" @click="applyPack(item)">{{ applied[item._id] ? '已应用到账号' : '应用到账号' }}</button>
     <button class="btn large" @click="exportPack(item)">导出 XML</button>
   </div>
-</aside>`,
+</div>`,
 });
 
 /* --- my filters (#/mine) --- */
@@ -625,22 +670,30 @@ app.component('mine-view', {
             try {
                 await api.postJSON('del_item', { ids: f.id });
                 state.list = state.list.filter(x => x !== f);
-                toast('已删除“' + f.filter + '”');
+                // deleting writes straight to the Bilibili account, so offer an undo instead of asking first
+                toast('已删除“' + f.filter + '”', { key: 'mine-delete', action: { label: '撤销', run: () => restore(f) } });
             } catch (e) { fail('删除', e); }
             delete removing[f.id];
         }
+        async function restore(f) {
+            try {
+                await api.postForm('add_item', { type: f.type, filter: f.filter });
+                toast('已恢复“' + f.filter + '”');
+                setTimeout(load, 500);
+            } catch (e) { fail('恢复', e); }
+        }
         onMounted(load);
         watch(() => session.loggedIn, load);
-        return { session, state, load, type, value, add, adding, remove, removing, counts, regexError, TYPE_LABEL };
+        return { session, state, load, type, value, add, adding, remove, removing, counts, regexError, TYPE_LABEL, icons };
     },
     template: `
-<div class="shell">
+<div class="shell page">
   <div class="page-title">
     <h1>我的屏蔽</h1>
     <p>这里是你 B 站账号里现有的弹幕屏蔽词。改动会直接保存到 B 站，在播放器的屏蔽设定里点“同步屏蔽列表”就能生效。</p>
   </div>
   <div v-if="!session.loggedIn" class="panel empty">
-    <h3>登录后查看你的屏蔽词</h3>
+    <h2>登录后查看你的屏蔽词</h2>
     <p>用 B 站手机客户端扫码登录，网站不会保存你的密码。</p>
     <a class="btn primary" href="#/login">登录</a>
   </div>
@@ -664,16 +717,16 @@ app.component('mine-view', {
       </div>
       <div v-if="state.loading" class="skeleton"><span style="width: 40%"></span><span style="width: 70%"></span></div>
       <div v-else-if="state.error === 'expired'" class="callout">
-        <span v-html="'!'"></span><div>B 站没有返回你的屏蔽列表，登录可能已经过期。<a href="#/login">重新登录</a></div>
+        <span v-html="icons.alert" style="display: contents"></span><div>B 站没有返回你的屏蔽列表，登录可能已经过期。<a href="#/login">重新登录</a></div>
       </div>
-      <div v-else-if="state.error" class="callout"><div>没能读取屏蔽列表，请检查网络后 <a href="javascript:void(0)" @click="load">重试</a>。</div></div>
-      <div v-else-if="!state.list.length" class="empty"><h3>你还没有屏蔽词</h3><p>在上面添加，或者去 <a href="#/">屏蔽词包</a> 里挑一份应用。</p></div>
+      <div v-else-if="state.error" class="callout"><span v-html="icons.alert" style="display: contents"></span><div>没能读取屏蔽列表，请检查网络后 <button type="button" class="link-btn" @click="load">重试</button>。</div></div>
+      <div v-else-if="!state.list.length" class="empty"><h2>你还没有屏蔽词</h2><p>在上面添加，或者去 <a href="#/">屏蔽词包</a> 里挑一份应用。</p></div>
       <div v-else class="table-box">
         <table class="filter-table">
           <tr v-for="f in state.list" :key="f.id">
             <td class="type"><span class="type-pill" :class="'t' + f.type">{{ TYPE_LABEL[f.type] }}</span></td>
             <td class="val" :class="{ re: f.type == 1, mono: f.type == 2 }">{{ f.filter }}</td>
-            <td class="act"><button class="btn danger small" :disabled="removing[f.id]" @click="remove(f)">删除</button></td>
+            <td class="act"><button class="btn danger small" :disabled="removing[f.id]" @click="remove(f)" :aria-label="'删除 ' + f.filter">删除</button></td>
           </tr>
         </table>
       </div>
@@ -727,10 +780,10 @@ app.component('users-view', {
             try { await api.postForm('share_user_blacklist', {}); toast('已上传你的用户黑名单', { sub: '统计每 20 分钟更新一次' }); }
             catch (e) { fail('上传', e); }
         }
-        return { min, state, groups, total, pending, done, run, blockAll, share, fmt, session };
+        return { min, state, groups, total, pending, done, run, blockAll, share, fmt, session, load };
     },
     template: `
-<div class="shell">
+<div class="shell page">
   <div class="page-title">
     <h1>用户黑名单</h1>
     <p>大家上传了自己屏蔽的弹幕发送者。一个人被越多网友屏蔽，越可能是刷屏或引战的账号。选一个门槛，把他们一次性加进你的屏蔽列表。</p>
@@ -751,12 +804,12 @@ app.component('users-view', {
   </div>
   <div class="panel">
     <div v-if="state.loading" class="skeleton"><span style="width: 30%"></span><span style="width: 90%"></span><span style="width: 80%"></span></div>
-    <div v-else-if="state.error" class="empty"><h3>黑名单没加载出来</h3><button class="btn secondary" @click="min = min + 0">重新加载</button></div>
-    <div v-else-if="!groups.length" class="empty"><h3>没有达到这个门槛的用户</h3><p>把门槛调低一些试试。</p></div>
+    <div v-else-if="state.error" class="empty"><h2>黑名单没加载出来</h2><p>可能是网络问题，稍后再试一次。</p><button class="btn secondary" @click="load">重新加载</button></div>
+    <div v-else-if="!groups.length" class="empty"><h2>没有达到这个门槛的用户</h2><p>把门槛调低一些试试。</p></div>
     <div v-else>
       <section class="group" v-for="g in groups" :key="g.n">
-        <h3>被 {{ g.n }} 位网友屏蔽（{{ g.hashes.length }} 个）</h3>
-        <ul class="hash-list"><li v-for="h in g.hashes" :key="h" :class="{ done: done[h] }" :title="done[h] ? '已屏蔽' : ''">{{ h }}</li></ul>
+        <h2>被 {{ g.n }} 位网友屏蔽 <span class="hint">{{ g.hashes.length }} 个</span></h2>
+        <ul class="hash-list"><li v-for="h in g.hashes" :key="h" :class="{ done: done[h] }" :title="done[h] ? '已屏蔽' : null">{{ h }}<span v-if="done[h]" class="sr-only">，已屏蔽</span></li></ul>
       </section>
     </div>
   </div>
@@ -804,11 +857,11 @@ app.component('submit-view', {
     template: `
 <div class="shell">
   <div class="page-title">
-    <h1>提交屏蔽词包</h1>
+    <h1>分享屏蔽词包</h1>
     <p>把你用着顺手的屏蔽词整理成一份，给它起个名字、写清楚屏蔽什么，别人就能一键用上。一份包最好只针对一类弹幕。</p>
   </div>
   <div v-if="!session.loggedIn" class="panel empty">
-    <h3>登录后提交屏蔽词包</h3>
+    <h2>登录后分享屏蔽词包</h2>
     <p>发布的屏蔽词包会显示你的 B 站 UID。</p>
     <a class="btn primary" href="#/login">登录</a>
   </div>
@@ -837,12 +890,12 @@ app.component('submit-view', {
           <button type="button" class="btn secondary" @click="addTyped" :disabled="!newValue.trim() || !!regexError">添加</button>
         </div>
         <p class="error-text" v-if="regexError || notice || errors.filters" style="margin-top: 8px">{{ regexError || notice || errors.filters }}</p>
-        <div class="table-box scroll" v-if="filters.length" style="margin-top: 14px">
+        <div class="table-box scroll" v-if="filters.length" style="margin-top: 14px" tabindex="0" role="region" aria-label="已添加的屏蔽词">
           <table class="filter-table">
             <tr v-for="(f, i) in filters" :key="f.filter">
               <td class="type"><span class="type-pill" :class="'t' + f.type">{{ TYPE_LABEL[f.type] }}</span></td>
               <td class="val" :class="{ re: f.type == 1 }">{{ f.filter }}</td>
-              <td class="act"><button type="button" class="btn ghost small" @click="filters.splice(i, 1)">移除</button></td>
+              <td class="act"><button type="button" class="btn ghost small" @click="filters.splice(i, 1)" :aria-label="'移除 ' + f.filter">移除</button></td>
             </tr>
           </table>
         </div>
@@ -876,11 +929,11 @@ app.component('submit-view', {
       <p v-else-if="!importable.length" class="hint">{{ mine.state.list.length ? '已经全部加进去了。' : '你的账号里还没有屏蔽词。' }}</p>
       <template v-else>
         <button type="button" class="btn secondary small" @click="importAll" style="margin-bottom: 10px">全部导入（{{ importable.length }}）</button>
-        <div class="table-box scroll">
+        <div class="table-box scroll" tabindex="0" role="region" aria-label="可导入的屏蔽词">
           <table class="filter-table">
             <tr v-for="f in importable" :key="f.id">
               <td class="val" :class="{ re: f.type == 1 }">{{ f.filter }}</td>
-              <td class="act"><button type="button" class="btn ghost small" @click="addFilter(f.type, f.filter)">添加</button></td>
+              <td class="act"><button type="button" class="btn ghost small" @click="addFilter(f.type, f.filter)" :aria-label="'添加 ' + f.filter">添加</button></td>
             </tr>
           </table>
         </div>
@@ -947,13 +1000,13 @@ app.component('login-view', {
         onMounted(() => { if (session.loggedIn) { go('/'); return; } start(); });
         onBeforeUnmount(() => { alive = false; stop(); });
         const stepIndex = computed(() => ({ waiting: 0, scanned: 1, done: 2 })[phase.value] ?? 0);
-        return { phase, qrSvg, start, cookie, cookieLogin, cookieBusy, stepIndex };
+        return { phase, qrSvg, start, cookie, cookieLogin, cookieBusy, stepIndex, icons };
     },
     template: `
 <div class="shell">
   <div class="login-wrap">
     <section class="panel">
-      <h2>扫码登录</h2>
+      <h1>扫码登录</h1>
       <p class="sub">用哔哩哔哩手机客户端扫描二维码。网站拿不到你的密码。</p>
       <div class="qr-box">
         <div v-if="phase === 'loading'" class="hint">正在生成二维码…</div>
@@ -973,15 +1026,15 @@ app.component('login-view', {
     <section class="panel">
       <h2>登录之前</h2>
       <p class="sub">登录后网站可以读取和修改你账号里的弹幕屏蔽词，这样才能一键应用屏蔽词包。</p>
-      <div class="callout info"><span v-html="'i'" style="font-weight: 700"></span><div>数据库只记录你的 UID，不保存密码和 Cookie。使用本网站即表示你同意 <a href="eula.html">用户协议</a>，担心安全可以先看看 <a href="eula.html#qa">问答</a>。</div></div>
+      <div class="callout info"><span v-html="icons.info" style="display: contents"></span><div>数据库只记录你的 UID，不保存密码和 Cookie。使用本网站即表示你同意 <a href="eula.html">用户协议</a>，担心安全可以先看看 <a href="eula.html#qa">问答</a>。</div></div>
       <details class="more">
         <summary>扫码用不了？用 Cookie 登录</summary>
-        <form class="stack" style="gap: 10px" @submit.prevent="cookieLogin">
+        <form class="cookie-form" @submit.prevent="cookieLogin">
           <p class="hint">在电脑浏览器登录 B 站后，从开发者工具的 Cookie 里复制这四项。</p>
-          <input class="input mono" v-model="cookie.DedeUserID" placeholder="DedeUserID" required autocomplete="off" />
-          <input class="input mono" v-model="cookie.DedeUserID__ckMd5" placeholder="DedeUserID__ckMd5" type="password" required autocomplete="off" />
-          <input class="input mono" v-model="cookie.SESSDATA" placeholder="SESSDATA" type="password" required autocomplete="off" />
-          <input class="input mono" v-model="cookie.bili_jct" placeholder="bili_jct" type="password" required autocomplete="off" />
+          <div class="field" v-for="(k, i) in ['DedeUserID', 'DedeUserID__ckMd5', 'SESSDATA', 'bili_jct']" :key="k">
+            <label :for="'ck-' + i">{{ k }}</label>
+            <input :id="'ck-' + i" class="input mono" v-model="cookie[k]" :name="k" :type="i ? 'password' : 'text'" :inputmode="i ? null : 'numeric'" required autocomplete="off" spellcheck="false" />
+          </div>
           <button class="btn primary" :disabled="cookieBusy">{{ cookieBusy ? '正在登录…' : '用 Cookie 登录' }}</button>
         </form>
       </details>
@@ -991,16 +1044,21 @@ app.component('login-view', {
 });
 
 app.component('not-found', {
-    template: `<div class="shell"><div class="empty" style="padding: 96px 0"><h3>这个页面不存在</h3><p>链接可能写错了。</p><a class="btn secondary" href="#/">回到屏蔽词包</a></div></div>`,
+    template: `<div class="shell"><div class="empty" style="padding: 96px 0"><h1>这个页面不存在</h1><p>链接可能写错了。</p><a class="btn secondary" href="#/">回到屏蔽词包</a></div></div>`,
 });
 
 app.component('toast-stack', {
-    setup() { return { toasts, icons }; },
+    setup() {
+        function act(t) { dismissToast(t); t.action.run(); }
+        return { toasts, icons, act, dismissToast };
+    },
     template: `
 <div class="toasts" role="status" aria-live="polite">
   <div v-for="t in toasts" :key="t.id" class="toast" :class="t.kind">
     <span v-html="t.kind === 'err' ? icons.alert : icons.check"></span>
     <div class="t-body">{{ t.text }}<div class="t-sub" v-if="t.sub">{{ t.sub }}</div></div>
+    <button v-if="t.action" type="button" class="t-action" @click="act(t)">{{ t.action.label }}</button>
+    <button type="button" class="t-close" @click="dismissToast(t)" aria-label="关闭通知" v-html="icons.close"></button>
   </div>
 </div>`,
 });
@@ -1008,7 +1066,11 @@ app.component('toast-stack', {
 app.component('app-dialog', {
     setup() {
         const primary = ref(null);
-        watch(() => dialog.name, n => { if (n) nextTick(() => primary.value && primary.value.focus()); });
+        let restoreFocus = null;
+        watch(() => dialog.name, n => {
+            if (n) { restoreFocus = rememberFocus(); nextTick(() => primary.value && primary.value.focus()); }
+            else if (restoreFocus) { restoreFocus(); restoreFocus = null; }
+        });
         function onKey(e) { if (e.key === 'Escape' && dialog.name) closeDialog(false); }
         onMounted(() => document.addEventListener('keydown', onKey));
         onBeforeUnmount(() => document.removeEventListener('keydown', onKey));
@@ -1016,27 +1078,27 @@ app.component('app-dialog', {
     },
     template: `
 <div class="dialog-wrap" v-if="dialog.name" @click.self="closeDialog(false)">
-  <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-title">
+  <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-title" aria-describedby="dlg-body">
     <template v-if="dialog.name === 'login-required'">
       <h2 id="dlg-title">先登录 B 站账号</h2>
-      <p>应用屏蔽词、屏蔽用户和发表评价都需要登录，这样网站才能把屏蔽词写进你的账号。只想要文件的话，可以用“导出 XML”。</p>
+      <p id="dlg-body">应用屏蔽词、屏蔽用户和发表评价都需要登录，这样网站才能把屏蔽词写进你的账号。只想要文件的话，可以用“导出 XML”。</p>
       <div class="actions"><button class="btn ghost" @click="closeDialog(false)">取消</button><button ref="primary" class="btn primary" @click="closeDialog(true)">去登录</button></div>
     </template>
     <template v-else-if="dialog.name === 'sync-guide'">
       <h2 id="dlg-title">已应用到账号，还差一步</h2>
-      <p>屏蔽词已经写进你的 B 站账号。播放器要同步一次才会生效：</p>
+      <p id="dlg-body">屏蔽词已经写进你的 B 站账号。播放器要同步一次才会生效：</p>
       <ol><li>打开任意一个 B 站视频</li><li>点播放器右侧弹幕列表上方的“屏蔽设定”</li><li>点“同步屏蔽列表”</li></ol>
       <div class="actions"><button ref="primary" class="btn primary" @click="closeDialog(true)">知道了</button></div>
     </template>
     <template v-else-if="dialog.name === 'import-guide'">
       <h2 id="dlg-title">已导出 XML</h2>
-      <p>在 B 站播放器里导入这个文件：</p>
+      <p id="dlg-body">在 B 站播放器里导入这个文件：</p>
       <ol><li>打开任意一个 B 站视频，点“屏蔽设定”</li><li>在屏蔽列表里点右键，选“导入 xml 文件”</li><li>选择刚下载的文件</li></ol>
       <div class="actions"><button ref="primary" class="btn primary" @click="closeDialog(true)">知道了</button></div>
     </template>
     <template v-else-if="dialog.name === 'confirm-block-all'">
       <h2 id="dlg-title">屏蔽 {{ dialog.data.count }} 个用户？</h2>
-      <p>会把被至少 {{ dialog.data.min }} 位网友屏蔽的 {{ dialog.data.count }} 个用户加进你的 B 站屏蔽列表。之后可以在“我的屏蔽”里逐个删除。</p>
+      <p id="dlg-body">会把被至少 {{ dialog.data.min }} 位网友屏蔽的 {{ dialog.data.count }} 个用户加进你的 B 站屏蔽列表。之后可以在“我的屏蔽”里逐个删除。</p>
       <div class="actions"><button class="btn ghost" @click="closeDialog(false)">取消</button><button ref="primary" class="btn primary" @click="closeDialog(true)">屏蔽 {{ dialog.data.count }} 个用户</button></div>
     </template>
   </div>
