@@ -30,12 +30,13 @@ function storeToken(uid: string, token: string) {
  * 
  * @param {(OAuthKey: string)=>void} callback the callback
  */
-function getOAuthKey(callback: (OAuthKey: string) => void) {
+function getOAuthKey(callback: (OAuthKey: string | null) => void) {
     bilibili.jsonCall("https://passport.bilibili.com/qrcode/getLoginUrl", null,
         function (res) {
             callback(res["data"]);
         }, function (err) {
             console.log("[Error][Login] Failed to get OAuthKey");
+            callback(null);
         });
 }
 
@@ -47,12 +48,13 @@ function getOAuthKey(callback: (OAuthKey: string) => void) {
  * @param {string} oauthkey 要验证的oauthkey,
  * @param {((status: number|object)=>void)} callback callback
  */
-function getLoginInfo(oauthkey: string, callback: (status: number | object) => void) {
+function getLoginInfo(oauthkey: string, callback: (status: number | object | null) => void) {
     bilibili.jsonCallPost("https://passport.bilibili.com/qrcode/getLoginInfo", null, { "oauthKey": oauthkey },
         function (res) {
             callback(res["data"]);
         }, function (err) {
             console.log("[Error][Login] Failed to get login info");
+            callback(null);
         });
 }
 
@@ -78,12 +80,14 @@ export function registerApis(app: express.Application) {
     });
     app.get('/login/getoauth', function (req, response) {
         getOAuthKey(function (res) {
-            response.json(res);
+            if (res === null) response.status(502).json({ "code": -1, "message": "Bilibili did not respond" });
+            else response.json(res);
         });
     });
     app.post('/login/getinfo', function (req, response) {
         getLoginInfo(req.body["oauthkey"], function (res) {
-            response.json(res);
+            if (res === null) response.status(502).json({ "code": -1, "message": "Bilibili did not respond" });
+            else response.json(res);
         });
     });
 }

@@ -77,6 +77,15 @@ export function registerApis(app: express.Application) {
             });
         });
     });
+    app.get('/list', function (req, response) {
+        new database.Database(function (db) {
+            db.find("sharelist", { "_id": req.query["id"] }, function (res) {
+                if (res.length == 0) response.status(404).json({ "code": -1, "message": "invalid id" });
+                else response.json(res[0]);
+                db.close();
+            });
+        });
+    });
     app.get('/export_list', function (req, response) {
         var query = { "_id": req.query["id"] };
         new database.Database(function (db) {
