@@ -240,7 +240,7 @@ app.component('danmaku-screen', {
             ['只有我一个人在看吗', 1], ['UP 主辛苦了', 0], ['前方高能', 1], ['原来是这样', 0], ['我是第一个看完的', 1], ['笑死', 0],
             ['刚刚投递', 1], ['细节拉满', 0],
         ];
-        const lanes = 5;
+        const lanes = 4;
         const items = ref([]);
         const blocked = ref(0);
         const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -251,7 +251,7 @@ app.component('danmaku-screen', {
 
         function geometry() {
             const el = lanesEl.value; const width = (el && el.clientWidth) || 640;
-            const font = Math.max(13, Math.min(19, window.innerWidth * 0.0155));
+            const font = 15;
             return { width, font };
         }
         function makeItem(lane, startX) {
@@ -307,8 +307,7 @@ app.component('danmaku-screen', {
     <span v-for="i in items" :key="i.id" class="dm" :class="[i.color, { hit: i.hit }]" :style="i.style">{{ i.text }}</span>
   </div>
   <div class="screen-bar" aria-hidden="true">
-    <div class="screen-track"><span></span></div>
-    <div class="screen-meta"><span>07:42 / 22:48</span><span class="screen-count"><i></i>已划掉 {{ fmt(blocked) }} 条弹幕</span></div>
+    <div class="screen-meta"><span>弹幕示意</span><span class="screen-count"><i></i>已划掉 {{ fmt(blocked) }} 条</span></div>
   </div>
 </div>`,
 });
@@ -363,31 +362,21 @@ app.component('home-view', {
             return out;
         });
         return { state, sort, page, tags, quickTags, allTags, listTop, setQuery, toggleTag, setTags, gotoPage, pages,
-            applied, applyPack, exportPack, fmt, ratingText, safetyOf, cleanTags, preview, session, detailHref };
+            applied, applyPack, exportPack, fmt, ratingText, safetyOf, cleanTags, preview, session, detailHref, votes };
     },
     template: `
-<section class="hero">
-  <div class="shell">
-    <div>
-      <h1>挑一份屏蔽词，一键用到你的 B 站账号</h1>
-      <p class="lede">网友整理的弹幕屏蔽词包，按用途分好类。刷屏、剧透、抢前排、引战，挑一份应用，下次打开视频就清爽了。</p>
-      <div class="actions">
-        <a class="btn primary large" href="#browse" @click.prevent="$refs.browse.scrollIntoView({ behavior: 'smooth' })">浏览屏蔽词包</a>
-        <a class="btn secondary large" href="#/submit">分享我的屏蔽词</a>
-      </div>
-      <p class="disclaimer">非哔哩哔哩官方网站。应用屏蔽词需要登录 B 站账号，也可以导出 XML 后在播放器里手动导入。</p>
-    </div>
-    <danmaku-screen />
-  </div>
-</section>
+<div class="shell">
+  <section class="strip" aria-label="弹幕示意"><danmaku-screen /></section>
+  <p class="intro">
+    <span>大家整理的 B 站弹幕屏蔽词。点“应用”会写进你的 B 站账号，不想登录也可以导出 XML，在播放器里手动导入。</span>
+    <a href="#/submit">分享我的屏蔽词</a>
+  </p>
+</div>
 
 <section class="section" ref="browse" id="browse">
   <div class="shell">
     <div class="section-head" ref="listTop">
-      <div>
-        <h2>屏蔽词包</h2>
-        <p v-if="!state.loading && !state.error">共 {{ fmt(state.total) }} 个<span v-if="tags.length">，含任一所选标签</span></p>
-      </div>
+      <h2>屏蔽词包 <span class="hint" v-if="!state.loading && !state.error">{{ fmt(state.total) }} 个<span v-if="tags.length">，含任一所选标签</span></span></h2>
       <div class="segmented" role="group" aria-label="排序">
         <button :aria-pressed="sort === 'usage'" @click="setQuery({ sort: '', page: '' }, true)">最多使用</button>
         <button :aria-pressed="sort === 'time'" @click="setQuery({ sort: 'time', page: '' }, true)">最新发布</button>
@@ -397,16 +386,15 @@ app.component('home-view', {
     <div class="toolbar">
       <div class="grow"><tag-picker :model-value="tags" @update:model-value="setTags" :options="allTags" placeholder="按标签筛选，例如 刷屏、剧透" /></div>
       <div class="chip-row" aria-label="常用标签">
+        <span class="label">常用：</span>
         <button v-for="t in quickTags" :key="t" class="chip" :aria-pressed="tags.includes(t)" @click="toggleTag(t)">{{ t }}</button>
       </div>
     </div>
 
     <div class="pack-list" aria-live="polite" :aria-busy="state.loading">
-      <template v-if="state.loading">
-        <div class="skeleton" v-for="n in 5" :key="n"><span style="width: 32%"></span><span style="width: 58%"></span><span style="width: 74%"></span></div>
-      </template>
+      <div v-if="state.loading" class="loading">加载中…</div>
       <div v-else-if="state.error" class="empty">
-        <h3>屏蔽词包没加载出来</h3>
+        <h3>列表没加载出来</h3>
         <p>可能是网络问题，稍后再试一次。</p>
         <button class="btn secondary" @click="setQuery({})">重新加载</button>
       </div>
@@ -415,31 +403,32 @@ app.component('home-view', {
         <p>换个标签试试，或者把你的屏蔽词分享出来。</p>
         <button class="btn secondary" @click="setTags([])">清除标签</button>
       </div>
-      <ul v-else>
+      <template v-else>
+      <div class="pack-head" aria-hidden="true"><span>名称</span><span class="num">使用</span><span class="num">评价</span><span></span></div>
+      <ul>
         <li class="pack" v-for="item in state.items" :key="item._id">
           <div>
-            <h3 class="pack-name"><a :href="detailHref(item._id)">{{ item.name }}</a></h3>
-            <div class="pack-meta">
-              <span><b>{{ fmt(item.usage) }}</b> 次使用</span>
-              <span>{{ ratingText(item) }}</span>
-              <span v-if="safetyOf(item)" class="safety" :class="safetyOf(item).cls">{{ safetyOf(item).label }}</span>
+            <div class="pack-title">
+              <h3 class="pack-name"><a :href="detailHref(item._id)">{{ item.name }}</a></h3>
               <span class="tags" v-if="cleanTags(item).length"><span class="tag" v-for="t in cleanTags(item)" :key="t">{{ t }}</span></span>
+              <span v-if="safetyOf(item)" class="safety" :class="safetyOf(item).cls">{{ safetyOf(item).label }}</span>
             </div>
             <p class="pack-desc" v-if="item.description">{{ item.description }}</p>
             <ul class="struck" :aria-label="'部分屏蔽词，共 ' + item.filters.length + ' 条'">
               <li v-for="(f, i) in preview(item)" :key="i" :class="{ re: f.type == 1 }">{{ f.filter }}</li>
-              <li class="more" v-if="item.filters.length > preview(item).length">共 {{ fmt(item.filters.length) }} 条</li>
+              <li class="more" v-if="item.filters.length > preview(item).length"><a :href="detailHref(item._id)">共 {{ fmt(item.filters.length) }} 条</a></li>
             </ul>
           </div>
+          <div class="pack-num"><b>{{ fmt(item.usage) }}</b></div>
+          <div class="pack-num"><b>{{ votes(item).total ? Math.round(votes(item).up / votes(item).total * 100) + '%' : '—' }}</b>{{ votes(item).total ? votes(item).total + ' 人' : '暂无' }}</div>
+          <div class="pack-meta"><span><b>{{ fmt(item.usage) }}</b> 次使用</span><span>{{ ratingText(item) }}</span></div>
           <div class="pack-actions">
-            <button class="btn" :class="applied[item._id] ? 'done' : 'primary'" :disabled="applied[item._id]" @click="applyPack(item)">
-              <span v-if="applied[item._id]" v-html="'✓'"></span>{{ applied[item._id] ? '已应用' : '应用到账号' }}
-            </button>
-            <button class="btn secondary" @click="exportPack(item)">导出 XML</button>
-            <a class="btn ghost" :href="detailHref(item._id)">查看全部</a>
+            <button class="btn" :class="applied[item._id] ? 'done' : 'primary'" :disabled="applied[item._id]" @click="applyPack(item)">{{ applied[item._id] ? '已应用' : '应用' }}</button>
+            <button class="btn" @click="exportPack(item)">导出</button>
           </div>
         </li>
       </ul>
+      </template>
     </div>
 
     <nav class="pager" v-if="pages.length && !state.loading" aria-label="分页">
@@ -503,7 +492,7 @@ app.component('detail-panel', {
     setup(props) {
         const item = ref(null); const error = ref(false);
         const vote = ref(null); const text = ref(''); const posting = ref(false); const needVote = ref(false);
-        const closeBtn = ref(null);
+        const panel = ref(null);
         async function load() {
             item.value = home.cache.find(i => i._id === props.id) || null;
             error.value = false;
@@ -514,7 +503,7 @@ app.component('detail-panel', {
         watch(() => props.id, load);
         function close() { go('/', Object.fromEntries(Object.entries(router.query).filter(([k]) => ['sort', 'tags', 'page'].includes(k)))); }
         function onKey(e) { if (e.key === 'Escape' && !dialog.name) close(); }
-        onMounted(() => { load(); document.addEventListener('keydown', onKey); document.body.style.overflow = 'hidden'; nextTick(() => closeBtn.value && closeBtn.value.focus()); });
+        onMounted(() => { load(); document.addEventListener('keydown', onKey); document.body.style.overflow = 'hidden'; nextTick(() => panel.value && panel.value.focus()); });
         onBeforeUnmount(() => { document.removeEventListener('keydown', onKey); document.body.style.overflow = ''; });
 
         const comments = computed(() => (item.value && item.value.comments || []).filter(c => c.content && String(c.content).trim()));
@@ -532,25 +521,25 @@ app.component('detail-panel', {
             } catch (e) { fail('发表评价', e); }
             finally { posting.value = false; }
         }
-        return { item, error, close, closeBtn, comments, vote, text, post, posting, needVote, applied, applyPack, exportPack,
+        return { item, error, close, panel, comments, vote, text, post, posting, needVote, applied, applyPack, exportPack,
             fmt, fmtDate, votes, ratingText, safetyOf, cleanTags, TYPE_LABEL, icons };
     },
     template: `
 <div class="scrim" @click="close"></div>
-<aside class="drawer" role="dialog" aria-modal="true" :aria-label="item ? item.name : '屏蔽词包详情'">
+<aside ref="panel" tabindex="-1" class="drawer" role="dialog" aria-modal="true" :aria-label="item ? item.name : '屏蔽词包详情'">
   <div class="drawer-head">
     <h2>{{ item ? item.name : (error ? '找不到这个屏蔽词包' : '加载中…') }}</h2>
-    <button ref="closeBtn" class="btn icon ghost" @click="close" aria-label="关闭" v-html="icons.close"></button>
+    <button class="btn icon ghost" @click="close" aria-label="关闭" v-html="icons.close"></button>
   </div>
   <div class="drawer-body" v-if="error">
     <p>它可能已经被删除了。回到列表看看别的吧。</p>
   </div>
   <div class="drawer-body" v-else-if="item">
-    <dl class="stats">
-      <div><dt>使用次数</dt><dd>{{ fmt(item.usage) }}</dd></div>
-      <div><dt>评价</dt><dd>{{ votes(item).total ? Math.round(votes(item).up / votes(item).total * 100) + '%' : '—' }}</dd></div>
-      <div><dt>误伤程度</dt><dd v-if="safetyOf(item)" class="safety" :class="safetyOf(item).cls">{{ safetyOf(item).label }}</dd><dd v-else>—</dd></div>
-    </dl>
+    <p class="facts">
+      <span><b>{{ fmt(item.usage) }}</b> 次使用</span>
+      <span>{{ ratingText(item) }}</span>
+      <span v-if="safetyOf(item)" class="safety" :class="safetyOf(item).cls">{{ safetyOf(item).label }}</span>
+    </p>
     <p class="byline">
       <span>作者 <a :href="'https://space.bilibili.com/' + item.uid" target="_blank" rel="noopener">UID {{ item.uid }}</a></span>
       <span v-if="item.time">发布于 {{ fmtDate(item.time) }}</span>
@@ -594,7 +583,7 @@ app.component('detail-panel', {
   </div>
   <div class="drawer-foot" v-if="item">
     <button class="btn large" :class="applied[item._id] ? 'done' : 'primary'" :disabled="applied[item._id]" @click="applyPack(item)">{{ applied[item._id] ? '已应用到账号' : '应用到账号' }}</button>
-    <button class="btn large secondary" @click="exportPack(item)"><span v-html="icons.download"></span>导出 XML</button>
+    <button class="btn large" @click="exportPack(item)">导出 XML</button>
   </div>
 </aside>`,
 });
