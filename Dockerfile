@@ -1,16 +1,22 @@
-# Build the TypeScript sources, then ship only the runtime dependencies.
+# Build the TypeScript sources (this stage has all dev dependencies, incl. the MongoDB driver used by
+# scripts/migrate-to-sqlite.js --from-mongo: `docker build --target build -t bbl-build .`).
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY tsconfig.json app.ts ./
 COPY src ./src
-RUN npx tsc && npm prune --omit=dev
+RUN npx tsc
+
+FROM node:24-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production SQLITE_PATH=/data/bilibili_blacklist.db
-COPY --from=build /app/node_modules ./node_modules
+COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 COPY package.json ./
 COPY html ./html
