@@ -984,6 +984,7 @@ app.component('login-view', {
         const qrSvg = ref('');
         const cookie = reactive({ DedeUserID: '', DedeUserID__ckMd5: '', SESSDATA: '', bili_jct: '' });
         const cookieBusy = ref(false);
+        const failMsg = ref('');            // why a confirmed QR login still failed, shown on the QR overlay
         let poll = null, started = 0, alive = true;
 
         function renderQR(text) {
@@ -991,7 +992,7 @@ app.component('login-view', {
             qrSvg.value = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
         }
         async function start() {
-            stop(); phase.value = 'loading';
+            stop(); phase.value = 'loading'; failMsg.value = '';
             try {
                 const res = await api.get('login/getoauth', null, 10000);
                 oauth.url = res.url; oauth.key = res.oauthKey;
@@ -1000,22 +1001,36 @@ app.component('login-view', {
             } catch (e) { phase.value = 'error'; }
         }
         function stop() { clearInterval(poll); poll = null; }
+        // one poll at a time, and nothing after the key has been used: Bilibili answers any later poll on a
+        // confirmed key with "expired", which must never overwrite a login that just succeeded
+        let inFlight = false;
         async function check() {
-            if (!alive || !oauth.key) return;
+            if (!alive || !oauth.key || inFlight || phase.value === 'done' || phase.value === 'error') return;
             if (Date.now() - started > 170000) { phase.value = 'expired'; stop(); return; }
+            const key = oauth.key;
             let res;
-            try { res = await api.postJSON('login/getinfo', { oauthkey: oauth.key }, 8000); } catch (e) { return; }
+            inFlight = true;
+            try { res = await api.postJSON('login/getinfo', { oauthkey: key }, 15000); } catch (e) { return; } finally { inFlight = false; }
+            if (key !== oauth.key || phase.value === 'done') return;    // a newer QR code replaced this one meanwhile
             if (typeof res === 'number' || (typeof res === 'string' && /^-?\d+$/.test(res))) {
                 const code = Number(res);
                 if (code === -5) phase.value = 'scanned';
                 else if (code === -2) { phase.value = 'expired'; stop(); }
                 return;
             }
-            const url = res && res.url;
-            const m = url && /DedeUserID=(\d*?)&.*ckMd5=(.*?)&.*SESSDATA=(.*?)&.*bili_jct=(.*?)&/.exec(url);
-            if (!m) return;
-            stop(); phase.value = 'done';
-            await finish({ DedeUserID: m[1], DedeUserID__ckMd5: m[2], SESSDATA: m[3], bili_jct: m[4] });
+            if (!res || typeof res !== 'object') return;
+            stop();
+            if (res.code === 0) {
+                phase.value = 'done';
+                refreshSession();
+                if (session.loggedIn) { toast('已登录，UID ' + session.uid); go('/'); return; }
+                failMsg.value = '登录成功了，但浏览器没有保存登录信息。请检查是否禁用了 Cookie。';
+            } else if (res.code === -6) {
+                failMsg.value = 'B 站拒绝了这次登录（可能触发了风控）。过几分钟再扫一次，或用下面的 Cookie 登录。';
+            } else {
+                failMsg.value = 'B 站确认了登录，但没有返回完整的登录信息。请刷新二维码再试一次。';
+            }
+            phase.value = 'error';
         }
         async function finish(data) {
             try {
@@ -1033,7 +1048,7 @@ app.component('login-view', {
         onMounted(() => { if (session.loggedIn) { go('/'); return; } start(); });
         onBeforeUnmount(() => { alive = false; stop(); });
         const stepIndex = computed(() => ({ waiting: 0, scanned: 1, done: 2 })[phase.value] ?? 0);
-        return { phase, qrSvg, start, cookie, cookieLogin, cookieBusy, stepIndex, icons };
+        return { phase, qrSvg, start, cookie, cookieLogin, cookieBusy, stepIndex, icons, failMsg };
     },
     template: `
 <div class="shell">
@@ -1045,7 +1060,7 @@ app.component('login-view', {
         <div v-if="phase === 'loading'" class="hint">正在生成二维码…</div>
         <div v-else v-html="qrSvg" aria-label="登录二维码" role="img"></div>
         <div class="qr-overlay" v-if="phase === 'expired' || phase === 'error'">
-          <div><p style="margin-bottom: 10px">{{ phase === 'expired' ? '二维码已过期' : '二维码没有生成出来' }}</p><button class="btn primary small" @click="start">刷新二维码</button></div>
+          <div><p style="margin-bottom: 10px">{{ phase === 'expired' ? '二维码已过期' : (failMsg || '二维码没有生成出来') }}</p><button class="btn primary small" @click="start">刷新二维码</button></div>
         </div>
         <div class="qr-overlay" v-if="phase === 'scanned'"><p>已扫码，请在手机上点“确认登录”</p></div>
       </div>
@@ -1054,7 +1069,7 @@ app.component('login-view', {
         <li :class="{ current: stepIndex === 1, done: stepIndex > 1 }">扫码后在手机上确认登录</li>
         <li :class="{ current: stepIndex === 2 }">网站会自动完成登录，不用刷新页面</li>
       </ol>
-      <p class="status-line" aria-live="polite">{{ { loading: '', waiting: '等待扫码…', scanned: '等待手机确认…', done: '正在登录…', expired: '', error: '' }[phase] }}</p>
+      <p class="status-line" aria-live="polite">{{ { loading: '', waiting: '等待扫码…', scanned: '等待手机确认…', done: '正在登录…', expired: '二维码已过期，请刷新', error: failMsg || '二维码没有生成出来' }[phase] }}</p>
     </section>
     <section class="panel">
       <h2>登录之前</h2>

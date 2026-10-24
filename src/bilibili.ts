@@ -5,6 +5,12 @@ type JSONCallback = ((result: any) => void) | null;
 type ErrorCallback = ((error: any) => void) | null;
 type APICallback = ((isSuccess: boolean, resultOrError: any) => void) | null;
 
+// Bilibili's risk control rejects requests that don't look like a browser, so every call sends these
+export const BROWSER_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+    'Referer': 'https://www.bilibili.com/',
+};
+
 export enum FilterType {
     Normal, Regex, User
 }
@@ -19,7 +25,7 @@ export enum FilterType {
  * @param {ErrorCallback} err
  */
 export function jsonCall(url: string, cookie: null | string, callback: JSONCallback, err: ErrorCallback) {
-    request.get({ url: url, headers: { 'Cookie': cookie } },
+    request.get({ url: url, headers: Object.assign({ 'Cookie': cookie }, BROWSER_HEADERS) },
         function (error, response, body) {
             if (error || response.statusCode != 200) {
                 if (err) err(error ? error : body);
@@ -43,7 +49,7 @@ export function jsonCall(url: string, cookie: null | string, callback: JSONCallb
  * @param {ErrorCallback} err
  */
 export function jsonCallPost(url: string, cookie: null | string, args: object, callback: JSONCallback, err: ErrorCallback) {
-    request.post({ url: url, headers: { 'Cookie': cookie, 'Content-Type': 'application/x-www-form-urlencoded' }, form: args },
+    request.post({ url: url, headers: Object.assign({ 'Cookie': cookie, 'Content-Type': 'application/x-www-form-urlencoded' }, BROWSER_HEADERS), form: args },
         function (error, response, body) {
             if (error || response.statusCode != 200) {
                 if (err) err(error ? error : body);
