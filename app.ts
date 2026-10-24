@@ -30,5 +30,5 @@ login.registerApis(app);
 bilibili.registerApis(app);
 website.registerApis(app);
 
-var server = app.listen(8000)
+var server = app.listen(8000, process.env.HOST || "0.0.0.0")
 console.log("Server started.")
