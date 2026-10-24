@@ -30,6 +30,9 @@ const icons = {
     up: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 21H4V10h3zM7 10l4.5-7a2.2 2.2 0 0 1 2.9 2.6L13.5 9H19a2 2 0 0 1 2 2.3l-1.2 7.6A2.5 2.5 0 0 1 17.3 21H7"/></svg>',
     down: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M17 3h3v11h-3zM17 14l-4.5 7a2.2 2.2 0 0 1-2.9-2.6L10.5 15H5a2 2 0 0 1-2-2.3l1.2-7.6A2.5 2.5 0 0 1 6.7 3H17"/></svg>',
     x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>',
+    sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+    auto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" fill="currentColor"/></svg>',
     pause: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6v12M15 6v12"/></svg>',
     play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M8.5 6.5v11l9-5.5z"/></svg>',
 };
@@ -108,6 +111,30 @@ function logout() {
     refreshSession();
     toast('已退出登录');
 }
+
+/* theme: 'auto' follows the system; the choice is saved per browser. The inline script in the page head applies it
+   before first paint, this keeps it in step afterwards. */
+const THEME_KEY = 'bbl.theme';
+const THEMES = { auto: '跟随系统', light: '浅色', dark: '深色' };
+const theme = reactive({ pref: (() => { try { return localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) { return 'auto'; } })() });
+const darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+function applyTheme() {
+    const dark = theme.pref === 'dark' || (theme.pref === 'auto' && !!(darkQuery && darkQuery.matches));
+    const root = document.documentElement;
+    root.classList.add('theme-switching');            // no colour transitions smearing across the switch
+    root.dataset.theme = dark ? 'dark' : 'light';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#171a20' : '#ffffff');
+    void root.offsetHeight;
+    requestAnimationFrame(() => root.classList.remove('theme-switching'));
+}
+function cycleTheme() {
+    theme.pref = { auto: 'light', light: 'dark', dark: 'auto' }[theme.pref] || 'auto';
+    try { if (theme.pref === 'auto') localStorage.removeItem(THEME_KEY); else localStorage.setItem(THEME_KEY, theme.pref); } catch (e) { /* private mode */ }
+    applyTheme();
+}
+if (darkQuery) darkQuery.addEventListener('change', () => { if (theme.pref === 'auto') applyTheme(); });
+applyTheme();
 
 const router = reactive({ path: '/', query: {} });
 function parseHash() {
@@ -209,14 +236,15 @@ const app = createApp({
         // while a drawer or dialog is open, everything behind it is inert (no tabbing out of the overlay)
         const backgroundInert = computed(() => !!detailId.value || !!dialog.name);
         const isActive = p => (p === '/' ? view.value === 'home-view' : router.path === p);
-        return { session, menuOpen, view, detailId, isActive, logout, icons, mainEl, backgroundInert };
+        const themeNext = computed(() => THEMES[{ auto: 'light', light: 'dark', dark: 'auto' }[theme.pref]]);
+        return { session, menuOpen, view, detailId, isActive, logout, icons, mainEl, backgroundInert, theme, THEMES, themeNext, cycleTheme };
     },
     template: `
 <a class="skip-link" href="#main" @click.prevent="mainEl.focus()" :inert="backgroundInert">跳到正文</a>
 <header class="site-header" :inert="backgroundInert">
   <div class="shell">
     <a class="brand" href="#/">
-      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><path d="M0 0H28V20L20 28H0Z" fill="#14171c"/><rect x="6" y="7.5" width="11" height="2.5" fill="#fff" opacity=".55"/><rect x="6" y="12.5" width="16" height="3.5" fill="#ffd400"/><rect x="6" y="18.5" width="8" height="2.5" fill="#fff" opacity=".55"/></svg>
+      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><path class="mk" d="M0 0H28V20L20 28H0Z" fill="#14171c"/><rect x="6" y="7.5" width="11" height="2.5" fill="#fff" opacity=".55"/><rect x="6" y="12.5" width="16" height="3.5" fill="#ffd400"/><rect x="6" y="18.5" width="8" height="2.5" fill="#fff" opacity=".55"/></svg>
       <span>B站屏蔽词分享</span>
     </a>
     <button class="btn icon ghost menu-toggle" :aria-expanded="menuOpen" aria-controls="site-nav" @click="menuOpen = !menuOpen" v-html="icons.menu" aria-label="菜单"></button>
@@ -225,6 +253,7 @@ const app = createApp({
       <a class="nav-link" :class="{ active: isActive('/users') }" :aria-current="isActive('/users') ? 'page' : null" href="#/users">用户黑名单</a>
       <a class="nav-link" :class="{ active: isActive('/mine') }" :aria-current="isActive('/mine') ? 'page' : null" href="#/mine">我的屏蔽</a>
       <span class="divider" role="presentation"></span>
+      <button type="button" class="btn icon ghost theme-toggle" @click="cycleTheme" :aria-label="'主题：' + THEMES[theme.pref] + '，点击切换为' + themeNext" :title="'主题：' + THEMES[theme.pref]"><span v-html="icons[theme.pref === 'auto' ? 'auto' : (theme.pref === 'dark' ? 'moon' : 'sun')]" style="display: contents"></span><span class="theme-label">主题：{{ THEMES[theme.pref] }}</span></button>
       <a class="btn secondary small" href="#/submit">分享屏蔽词包</a>
       <span class="divider" role="presentation"></span>
       <span v-if="session.loggedIn" class="account">
