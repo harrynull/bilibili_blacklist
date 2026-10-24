@@ -216,7 +216,7 @@ const app = createApp({
 <header class="site-header" :inert="backgroundInert">
   <div class="shell">
     <a class="brand" href="#/">
-      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="#2c4a85"/><rect x="5" y="8" width="13" height="3" rx="1.5" fill="#fff"/><rect x="9" y="13.5" width="14" height="3" rx="1.5" fill="#fff" opacity=".55"/><rect x="5" y="19" width="10" height="3" rx="1.5" fill="#fff"/><rect x="7.5" y="13.4" width="17" height="3.2" rx="1" fill="#ffd23f"/></svg>
+      <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true"><path d="M0 0H28V20L20 28H0Z" fill="#14171c"/><rect x="6" y="7.5" width="11" height="2.5" fill="#fff" opacity=".55"/><rect x="6" y="12.5" width="16" height="3.5" fill="#ffd400"/><rect x="6" y="18.5" width="8" height="2.5" fill="#fff" opacity=".55"/></svg>
       <span>B站屏蔽词分享</span>
     </a>
     <button class="btn icon ghost menu-toggle" :aria-expanded="menuOpen" aria-controls="site-nav" @click="menuOpen = !menuOpen" v-html="icons.menu" aria-label="菜单"></button>
@@ -342,13 +342,14 @@ app.component('danmaku-screen', {
     },
     template: `
 <div class="screen" :class="{ static: reduce, paused: frozen }">
+  <i class="corner c1" aria-hidden="true"></i><i class="corner c2" aria-hidden="true"></i>
+  <div class="screen-top" aria-hidden="true"><span class="live">DANMAKU MONITOR · {{ reduce ? 'DEMO' : (frozen ? 'PAUSED' : 'LIVE') }}</span><span>BLOCKED <b>{{ String(blocked).padStart(3, '0') }}</b></span></div>
   <div class="screen-lanes" ref="lanesEl" role="img" aria-label="示意：视频弹幕滚动时，命中屏蔽词的弹幕被划掉">
     <span v-for="i in items" :key="i.id" class="dm" :class="[i.color, { hit: i.hit }]" :style="i.style" aria-hidden="true">{{ i.text }}</span>
   </div>
   <div class="screen-bar">
     <button v-if="!reduce" type="button" class="screen-btn" :aria-pressed="paused" @click="paused = !paused"><span v-html="paused ? icons.play : icons.pause"></span>{{ paused ? '继续播放' : '暂停弹幕' }}</button>
     <span v-else class="screen-label">弹幕示意</span>
-    <span class="screen-count" aria-hidden="true"><i></i>已划掉 {{ fmt(blocked) }} 条</span>
   </div>
 </div>`,
 });
@@ -408,27 +409,29 @@ app.component('home-view', {
     },
     template: `
 <div class="top-band"><div class="shell">
+  <p class="kicker" aria-hidden="true">DANMAKU FILTER EXCHANGE <span class="zh">// 弹幕屏蔽词分享</span></p>
+  <div class="hero-head">
+    <p class="hero-title">屏蔽弹幕</p>
+    <p class="hero-text">大家整理的 B 站弹幕屏蔽词。点“应用”会写进你的 B 站账号，不想登录也可以导出 XML，在播放器里手动导入。<a href="#/submit">分享屏蔽词包</a></p>
+  </div>
   <section class="strip" aria-label="弹幕示意"><danmaku-screen /></section>
-  <p class="intro">
-    <span>大家整理的 B 站弹幕屏蔽词。点“应用”会写进你的 B 站账号，不想登录也可以导出 XML，在播放器里手动导入。</span>
-    <a href="#/submit">分享屏蔽词包</a>
-  </p>
 </div></div>
 
 <section class="section" ref="browse" id="browse">
   <div class="shell">
     <div class="section-head" ref="listTop">
-      <h1>屏蔽词包 <span class="hint" v-if="!state.loading && !state.error">{{ fmt(state.total) }} 个<span v-if="tags.length">，含任一所选标签</span></span></h1>
+      <div class="titled"><span class="en" aria-hidden="true">Filter packs</span><h1>屏蔽词包</h1><span class="hint" v-if="!state.loading && !state.error">{{ fmt(state.total) }} 个<span v-if="tags.length">，含任一所选标签</span></span></div>
       <div class="segmented" role="group" aria-label="排序">
         <button :aria-pressed="sort === 'usage'" @click="setQuery({ sort: '', page: '' }, true)">最多使用</button>
         <button :aria-pressed="sort === 'time'" @click="setQuery({ sort: 'time', page: '' }, true)">最新发布</button>
       </div>
     </div>
 
+    <div class="list-card">
     <div class="toolbar">
       <div class="grow"><tag-picker :model-value="tags" @update:model-value="setTags" :options="allTags" placeholder="按标签筛选，例如 刷屏、剧透" /></div>
       <div class="chip-row" aria-label="常用标签">
-        <span class="label">常用：</span>
+        <span class="label">常用 <span class="en" aria-hidden="true">/ Tags</span></span>
         <button v-for="t in quickTags" :key="t" class="chip" :aria-pressed="tags.includes(t)" @click="toggleTag(t)">{{ t }}</button>
       </div>
     </div>
@@ -461,16 +464,17 @@ app.component('home-view', {
               <li class="more" v-if="item.filters.length > preview(item).length"><a :href="detailHref(item._id)">共 {{ fmt(item.filters.length) }} 条</a></li>
             </ul>
           </div>
-          <div class="pack-num"><b>{{ fmt(item.usage) }}</b></div>
+          <div class="pack-num"><b>{{ fmt(item.usage) }}</b><span class="en">Uses</span></div>
           <div class="pack-num"><b>{{ votes(item).total ? Math.round(votes(item).up / votes(item).total * 100) + '%' : '—' }}</b>{{ votes(item).total ? votes(item).total + ' 人' : '暂无' }}</div>
           <div class="pack-meta"><span><b>{{ fmt(item.usage) }}</b> 次使用</span><span>{{ ratingText(item) }}</span></div>
           <div class="pack-actions">
-            <button class="btn" :class="{ done: applied[item._id] }" :disabled="applied[item._id]" @click="applyPack(item)" :aria-label="(applied[item._id] ? '已应用 ' : '应用 ') + item.name">{{ applied[item._id] ? '已应用' : '应用' }}</button>
-            <button class="btn ghost" @click="exportPack(item)" :aria-label="'导出 ' + item.name">导出</button>
+            <button class="btn" :class="applied[item._id] ? 'done' : 'primary'" :disabled="applied[item._id]" @click="applyPack(item)" :aria-label="(applied[item._id] ? '已应用 ' : '应用 ') + item.name">{{ applied[item._id] ? '已应用' : '应用' }}</button>
+            <button class="btn" @click="exportPack(item)" :aria-label="'导出 ' + item.name">导出</button>
           </div>
         </li>
       </ul>
       </template>
+    </div>
     </div>
 
     <nav class="pager" v-if="pages.length && !state.loading" aria-label="分页">
@@ -573,7 +577,7 @@ app.component('detail-panel', {
 <div class="scrim" @click="close"></div>
 <div ref="panel" tabindex="-1" class="drawer" role="dialog" aria-modal="true" :aria-label="item ? item.name : '屏蔽词包详情'" :inert="!!dialog.name">
   <div class="drawer-head">
-    <h2>{{ item ? item.name : (error ? '找不到这个屏蔽词包' : '加载中…') }}</h2>
+    <div class="titled"><span class="en" aria-hidden="true">Filter pack</span><h2>{{ item ? item.name : (error ? '找不到这个屏蔽词包' : '加载中…') }}</h2></div>
     <button class="btn icon ghost" @click="close" aria-label="关闭详情" v-html="icons.close"></button>
   </div>
   <div class="drawer-body" v-if="error">
@@ -689,7 +693,7 @@ app.component('mine-view', {
     template: `
 <div class="shell page">
   <div class="page-title">
-    <h1>我的屏蔽</h1>
+    <div class="titled"><span class="en" aria-hidden="true">My filters</span><h1>我的屏蔽</h1></div>
     <p>这里是你 B 站账号里现有的弹幕屏蔽词。改动会直接保存到 B 站，在播放器的屏蔽设定里点“同步屏蔽列表”就能生效。</p>
   </div>
   <div v-if="!session.loggedIn" class="panel empty">
@@ -785,7 +789,7 @@ app.component('users-view', {
     template: `
 <div class="shell page">
   <div class="page-title">
-    <h1>用户黑名单</h1>
+    <div class="titled"><span class="en" aria-hidden="true">User blacklist</span><h1>用户黑名单</h1></div>
     <p>大家上传了自己屏蔽的弹幕发送者。一个人被越多网友屏蔽，越可能是刷屏或引战的账号。选一个门槛，把他们一次性加进你的屏蔽列表。</p>
   </div>
   <div class="panel">
@@ -857,7 +861,7 @@ app.component('submit-view', {
     template: `
 <div class="shell">
   <div class="page-title">
-    <h1>分享屏蔽词包</h1>
+    <div class="titled"><span class="en" aria-hidden="true">Share a pack</span><h1>分享屏蔽词包</h1></div>
     <p>把你用着顺手的屏蔽词整理成一份，给它起个名字、写清楚屏蔽什么，别人就能一键用上。一份包最好只针对一类弹幕。</p>
   </div>
   <div v-if="!session.loggedIn" class="panel empty">
