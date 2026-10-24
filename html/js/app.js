@@ -100,11 +100,12 @@ const api = {
 const session = reactive({ uid: null, loggedIn: false });
 function refreshSession() {
     session.uid = readCookie('uid');
-    session.loggedIn = !!readCookie('bilibili_cookies') && !!readCookie('token');
+    session.loggedIn = !!readCookie('uid');      // the credential cookies are HttpOnly now; uid is the readable marker
 }
 refreshSession();
-function logout() {
-    for (const name of ['uid', 'token', 'bilibili_cookies', 'csrf']) {
+async function logout() {
+    try { await api.postJSON('logout', {}); } catch (e) { /* still clear what the page can reach */ }
+    for (const name of ['uid', 'token', 'bilibili_cookies', 'csrf']) {   // legacy copies that were readable by scripts
         document.cookie = name + '=; Max-Age=0; path=/';
         document.cookie = name + '=; Max-Age=0';
     }

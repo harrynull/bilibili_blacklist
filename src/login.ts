@@ -51,6 +51,46 @@ const POLL_STATUS: { [code: number]: number } = {
 };
 
 const LOGIN_COOKIES = ["DedeUserID", "DedeUserID__ckMd5", "SESSDATA", "bili_jct"];
+
+/*
+ * Our session cookies. Everything except uid is HttpOnly (the page never needs to read the Bilibili credentials),
+ * all are SameSite=Lax (also blocks cross-site POSTs to /apply, /add_item, ...) and Secure when the request came in
+ * over HTTPS (behind Caddy, via X-Forwarded-Proto). COOKIE_PATH scopes them to where the app is mounted, e.g.
+ * /bilibili, so other sites on the same domain never receive them.
+ */
+const SESSION_COOKIES = ["uid", "token", "bilibili_cookies", "csrf"];
+const COOKIE_PATH = process.env.COOKIE_PATH || "/";
+
+function cookieOptions(req: express.Request, name: string): express.CookieOptions {
+    return { path: COOKIE_PATH, httpOnly: name !== "uid", secure: req.secure, sameSite: "lax" };
+}
+
+// copies set by older versions live at Path=/ with no flags; expire them so only the hardened ones remain
+function dropLegacyCookies(res: express.Response) {
+    if (COOKIE_PATH === "/") return;
+    for (const name of SESSION_COOKIES) res.clearCookie(name, { path: "/" });
+}
+
+function setSessionCookies(req: express.Request, res: express.Response, values: { [name: string]: string }) {
+    for (const name of SESSION_COOKIES) if (values[name]) res.cookie(name, values[name], cookieOptions(req, name));
+    dropLegacyCookies(res);
+}
+
+export function clearSessionCookies(req: express.Request, res: express.Response) {
+    for (const name of SESSION_COOKIES) res.clearCookie(name, cookieOptions(req, name));
+    dropLegacyCookies(res);
+}
+
+/**
+ * Sessions created before the cookies were hardened: on a page load, re-issue them with the new flags and path,
+ * so nobody has to log in again.
+ */
+export function upgradeSessionCookies(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const c = req.cookies || {};
+    if (req.method === "GET" && (req.path === "/" || req.path.endsWith(".html")) && c.uid && c.token && c.bilibili_cookies)
+        setSessionCookies(req, res, { uid: c.uid, token: c.token, bilibili_cookies: c.bilibili_cookies, csrf: c.csrf });
+    next();
+}
 type LoginCookies = { [name: string]: string };
 
 /**
@@ -96,7 +136,7 @@ function pollLogin(oauthkey: string, callback: (status: number | LoginCookies | 
  * Check the cookies against Bilibili (by reading the user's filter list) and, if they work, sign the visitor in:
  * set our session cookies on the response and store the token. done(true, uid) or done(false, reason).
  */
-function completeLogin(parts: LoginCookies, response: express.Response, done: (ok: boolean, info: any) => void) {
+function completeLogin(parts: LoginCookies, request: express.Request, response: express.Response, done: (ok: boolean, info: any) => void) {
     const uid = parts["DedeUserID"];
     const cookie = LOGIN_COOKIES.map(name => name + "=" + parts[name]).join("; ");
     bilibili.fetchBlacklist(cookie, function (suc, result) {
@@ -106,10 +146,7 @@ function completeLogin(parts: LoginCookies, response: express.Response, done: (o
             return;
         }
         const token = generateToken();
-        response.cookie("token", token);
-        response.cookie("uid", uid);
-        response.cookie("bilibili_cookies", cookie);
-        response.cookie("csrf", parts["bili_jct"]);
+        setSessionCookies(request, response, { uid: uid, token: token, bilibili_cookies: cookie, csrf: parts["bili_jct"] });
         storeToken(uid, token);
         done(true, uid);
     });
@@ -120,10 +157,15 @@ export function registerApis(app: express.Application) {
     app.post('/login/cookies', function (request, response) {
         const parts: LoginCookies = {};
         for (const name of LOGIN_COOKIES) parts[name] = request.body[name];
-        completeLogin(parts, response, function (ok, info) {
+        completeLogin(parts, request, response, function (ok, info) {
             if (ok) response.redirect("../index.html");
             else response.json(info);
         });
+    });
+    // the page can't delete HttpOnly cookies itself
+    app.post('/logout', function (req, response) {
+        clearSessionCookies(req, response);
+        response.json({ "code": 0 });
     });
     app.get('/login/getoauth', function (req, response) {
         getOAuthKey(function (res) {
@@ -142,7 +184,7 @@ export function registerApis(app: express.Application) {
                 response.json({ "code": -3, "message": "missing cookies" });
                 return;
             }
-            completeLogin(res, response, function (ok, uid) {
+            completeLogin(res, req, response, function (ok, uid) {
                 if (ok) response.json({ "code": 0, "uid": uid });
                 else response.json({ "code": -6, "message": "Bilibili rejected the login" });
             });

@@ -11,6 +11,8 @@ import website = require('./src/website_apis')
 
 var app = express();
 app.set('view engine', 'ejs');
+// behind Caddy: trust X-Forwarded-Proto from the local/private network, so req.secure reflects the visitor's HTTPS
+app.set('trust proxy', 'loopback, linklocal, uniquelocal');
 
 let RootDir = __dirname + "/.."
 
@@ -26,6 +28,7 @@ app.locals.assetVersion = assetVersion();
 
 app.use('/', express.static(RootDir + '/html'));
 app.use(cookieParser());
+app.use(login.upgradeSessionCookies);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
