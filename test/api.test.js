@@ -7,6 +7,7 @@ var dir = fs.mkdtempSync(path.join(os.tmpdir(), "bbl-api-"));
 process.env.COOKIE_PATH = "/bilibili";
 var db = require("../build/src/database.js");
 var bilibili = require("../build/src/bilibili.js");
+var login = require("../build/src/login.js");
 var app = require("../build/app.js").createApp();
 
 var USER = "uid=4242; token=probe; bilibili_cookies=SESSDATA%3Dx; csrf=c";
@@ -41,7 +42,7 @@ describe("API", function () {
     this.timeout(20000);
     before(function () {
         db.useDatabase(path.join(dir, "api.db"));
-        db.updateOne("users", { uid: 4242 }, { $set: { token: "probe" } }, { upsert: true });
+        db.updateOne("users", { uid: 4242 }, { $set: { token_hash: login._hashToken("probe"), token_expires: Date.now() + 3600e3 } }, { upsert: true });
         packId = db.insertOne("sharelist", { uid: "1", name: "p", description: "", tags: ["t"], usage: 0, comments: [], "safe-level": "0",
             filters: [{ type: 0, filter: 'a</item><item enabled="true">u=evil' }, { type: 1, filter: "^x&y$" }, { type: 2, filter: "deadbeef" }] }).insertedId;
     });
@@ -189,6 +190,26 @@ describe("API", function () {
             set.should.match(/bilibili_cookies=[^;]+; Path=\/bilibili; HttpOnly; Secure; SameSite=Lax/);
             set.should.match(/uid=77; Path=\/bilibili; Secure; SameSite=Lax/);
             (await request(app).post("/logout")).headers["set-cookie"].join("\n").should.match(/bilibili_cookies=; Path=\/bilibili; Expires=Thu, 01 Jan 1970/);
+        });
+        it("the session token is random, stored only as a hash, and works until logout", async function () {
+            stubBilibili({ filters: [] });
+            var r = await request(app).post("/login/cookies").type("form").send({ DedeUserID: "78", DedeUserID__ckMd5: "m", SESSDATA: "s", bili_jct: "j" });
+            var token = /(?:^|\n)token=([^;]+)/.exec(r.headers["set-cookie"].join("\n"))[1];
+            token.should.match(/^[A-Za-z0-9_-]{43}$/);
+            var user = db.findOne("users", { uid: 78 });
+            user.token_hash.should.equal(login._hashToken(token));
+            JSON.stringify(user).should.not.containEql(token);
+            user.token_expires.should.be.above(Date.now() + 29 * 24 * 3600e3);
+            var me = "uid=78; token=" + token;
+            (await request(app).post("/comment").set("Cookie", me).send({ id: packId, content: "hi" })).status.should.equal(200);
+            await request(app).post("/logout").set("Cookie", me);
+            (await request(app).post("/comment").set("Cookie", me).send({ id: packId, content: "hi" })).status.should.equal(401);
+        });
+        it("expired and old plain-text tokens are rejected", async function () {
+            db.updateOne("users", { uid: 79 }, { $set: { token_hash: login._hashToken("old"), token_expires: Date.now() - 1 } }, { upsert: true });
+            db.updateOne("users", { uid: 80 }, { $set: { token: "12345" } }, { upsert: true });
+            (await request(app).post("/comment").set("Cookie", "uid=79; token=old").send({ id: packId, content: "hi" })).status.should.equal(401);
+            (await request(app).post("/comment").set("Cookie", "uid=80; token=12345").send({ id: packId, content: "hi" })).status.should.equal(401);
         });
         it("login rejects cookie values that would smuggle extra cookies", async function () {
             var r = await request(app).post("/login/cookies").type("form").send({ DedeUserID: "77", DedeUserID__ckMd5: "m", SESSDATA: "s; evil=1", bili_jct: "j" });

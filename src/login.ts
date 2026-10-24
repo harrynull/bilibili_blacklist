@@ -1,3 +1,4 @@
+import crypto = require('crypto');
 import express = require('express');
 import database = require('./database');
 import bilibili = require('./bilibili');
@@ -8,8 +9,19 @@ import http = require('./http');
  * cookies, and `currentUser` for the routes that need a logged-in visitor.
  */
 
+/*
+ * Our own session token (it only authorises actions on this site: submitting packs, comments, ...). 256 random bits
+ * from the CSPRNG; the database keeps only its SHA-256 and an expiry, so a copy of the database cannot be used to sign
+ * in. One token per uid: signing in again (or logging out) replaces it.
+ */
+const SESSION_MS = 30 * 24 * 3600 * 1000;
+
 function generateToken() {
-    return "" + Math.floor(Math.random() * 100000000000);
+    return crypto.randomBytes(32).toString('base64url');
+}
+
+function hashToken(token: string) {
+    return crypto.createHash('sha256').update(token).digest('hex');
 }
 
 // x/passport-login/web/qrcode/poll status codes, mapped to the codes the front end understands
@@ -63,7 +75,16 @@ export function upgradeSessionCookies(req: express.Request, res: express.Respons
 export function currentUser(req: express.Request): number | null {
     const uid = Number(http.cookie(req, "uid")), token = http.cookie(req, "token");
     if (!Number.isInteger(uid) || uid <= 0 || !token || token.length > 64) return null;
-    return database.findOne("users", { uid: uid, token: token }) ? uid : null;
+    const user = database.findOne("users", { uid: uid, token_hash: hashToken(token) });
+    // tokens from before this change (plain text, no expiry) no longer match, so those visitors sign in again
+    return user && typeof user.token_expires === "number" && user.token_expires > Date.now() ? uid : null;
+}
+
+/** Start a session for `uid`: returns the token for the cookie, stores only its hash. */
+export function startSession(uid: number): string {
+    const token = generateToken();
+    database.updateOne("users", { uid: uid }, { $set: { token_hash: hashToken(token), token_expires: Date.now() + SESSION_MS, token: null } }, { upsert: true });
+    return token;
 }
 
 export function requireUser(req: express.Request): number {
@@ -118,9 +139,8 @@ async function completeLogin(parts: LoginCookies, req: express.Request, res: exp
         console.log("[Error][Login] Bilibili rejected the new session: " + (e instanceof bilibili.BiliError ? e.code + " " + e.message : "network error"));
         throw new http.HttpError(502, "B 站拒绝了这次登录", -6);
     }
-    const token = generateToken();
+    const token = startSession(parseInt(uid));
     setSessionCookies(req, res, { uid: uid, token: token, bilibili_cookies: cookie, csrf: parts["bili_jct"] });
-    database.updateOne("users", { uid: parseInt(uid) }, { $set: { token: token } }, { upsert: true });
     return uid;
 }
 
@@ -135,6 +155,8 @@ export function registerApis(app: express.Application) {
 
     // the page can't delete HttpOnly cookies itself
     app.post('/logout', http.route((req, res) => {
+        const uid = currentUser(req);
+        if (uid !== null) database.updateOne("users", { uid: uid }, { $set: { token_hash: null, token_expires: 0 } });
         clearSessionCookies(req, res);
         res.json({ code: 0 });
     }));
@@ -164,3 +186,4 @@ export function registerApis(app: express.Application) {
 }
 
 export let _generateToken = generateToken;
+export let _hashToken = hashToken;
