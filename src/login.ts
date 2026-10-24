@@ -1,49 +1,18 @@
+import express = require('express');
 import database = require('./database');
 import bilibili = require('./bilibili');
-import express = require('express');
-import request = require('request');
+import http = require('./http');
 
 /**
- * 生成Token
- * 
- * @returns token
+ * Login: QR code (Bilibili's passport-login qrcode/generate + poll API) or cookies pasted by hand, our session
+ * cookies, and `currentUser` for the routes that need a logged-in visitor.
  */
+
 function generateToken() {
-    return "" + Math.floor(Math.random() * 100000000000)
+    return "" + Math.floor(Math.random() * 100000000000);
 }
 
-/**
- * 修改数据库中的Token
- * 
- * @param {string} uid user's uid
- * @param {string} token user's token
- */
-function storeToken(uid: string, token: string) {
-    new database.Database(function (db) {
-        db.updateOne("users", { uid: parseInt(uid) },
-            { $set: { token: token } }, { upsert: true }, function () { db.close(); });
-    });
-}
-
-/**
- * 从Bilibili获取登录二维码 (x/passport-login/web/qrcode/generate; the old qrcode/getLoginUrl API is retired)
- * 返回 {"url": "https://account.bilibili.com/h5/account-h5/auth/scan-web?...&qrcode_key=...", "oauthKey": "<qrcode_key>"}
- *
- * @param {(OAuthKey: object | null) => void} callback the callback
- */
-function getOAuthKey(callback: (OAuthKey: object | null) => void) {
-    bilibili.jsonCall("https://passport.bilibili.com/x/passport-login/web/qrcode/generate", null,
-        function (res) {
-            const data = res && res["data"];
-            if (!data || !data["qrcode_key"]) { console.log("[Error][Login] Unexpected qrcode/generate response: " + JSON.stringify(res)); callback(null); return; }
-            callback({ "url": data["url"], "oauthKey": data["qrcode_key"] });
-        }, function (err) {
-            console.log("[Error][Login] Failed to get OAuthKey");
-            callback(null);
-        });
-}
-
-// x/passport-login/web/qrcode/poll status codes, mapped to the codes the front end already understands
+// x/passport-login/web/qrcode/poll status codes, mapped to the codes the front end understands
 const POLL_STATUS: { [code: number]: number } = {
     86101: -4,  // 未扫码 (not scanned yet)
     86090: -5,  // 已扫码未确认 (scanned, waiting for confirmation on the phone)
@@ -51,6 +20,7 @@ const POLL_STATUS: { [code: number]: number } = {
 };
 
 const LOGIN_COOKIES = ["DedeUserID", "DedeUserID__ckMd5", "SESSDATA", "bili_jct"];
+type LoginCookies = { [name: string]: string };
 
 /*
  * Our session cookies. Everything except uid is HttpOnly (the page never needs to read the Bilibili credentials),
@@ -81,17 +51,26 @@ export function clearSessionCookies(req: express.Request, res: express.Response)
     dropLegacyCookies(res);
 }
 
-/**
- * Sessions created before the cookies were hardened: on a page load, re-issue them with the new flags and path,
- * so nobody has to log in again.
- */
+/** Sessions from before the cookies were hardened: on a page load, re-issue them with the new flags and path. */
 export function upgradeSessionCookies(req: express.Request, res: express.Response, next: express.NextFunction) {
-    const c = req.cookies || {};
-    if (req.method === "GET" && (req.path === "/" || req.path.endsWith(".html")) && c.uid && c.token && c.bilibili_cookies)
-        setSessionCookies(req, res, { uid: c.uid, token: c.token, bilibili_cookies: c.bilibili_cookies, csrf: c.csrf });
+    const uid = http.cookie(req, "uid"), token = http.cookie(req, "token"), bili = http.cookie(req, "bilibili_cookies");
+    if (req.method === "GET" && (req.path === "/" || req.path.endsWith(".html")) && uid && token && bili)
+        setSessionCookies(req, res, { uid, token, bilibili_cookies: bili, csrf: http.cookie(req, "csrf") });
     next();
 }
-type LoginCookies = { [name: string]: string };
+
+/** The logged-in visitor's uid (as stored: a number), or null. */
+export function currentUser(req: express.Request): number | null {
+    const uid = Number(http.cookie(req, "uid")), token = http.cookie(req, "token");
+    if (!Number.isInteger(uid) || uid <= 0 || !token || token.length > 64) return null;
+    return database.findOne("users", { uid: uid, token: token }) ? uid : null;
+}
+
+export function requireUser(req: express.Request): number {
+    const uid = currentUser(req);
+    if (uid === null) throw new http.HttpError(401, "登录已过期，请重新登录", -1);
+    return uid;
+}
 
 /**
  * Pick the four login cookies out of a successful poll: the Set-Cookie headers first (what a browser would store),
@@ -114,82 +93,74 @@ export function extractLoginCookies(url: string | undefined, setCookie: string[]
     return out;
 }
 
-/**
- * 从Bilibili获取二维码的扫描状态 (x/passport-login/web/qrcode/poll)
- * callback: -4 未扫码, -5 已扫码未确认, -2 已失效, -1 其它, the login cookies on success, or null if Bilibili didn't answer.
- */
-function pollLogin(oauthkey: string, callback: (status: number | LoginCookies | null) => void) {
-    request.get({ url: "https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=" + encodeURIComponent(oauthkey || ""), headers: bilibili.BROWSER_HEADERS },
-        function (error, response, body) {
-            if (error || response.statusCode != 200) { console.log("[Error][Login] qrcode/poll failed: " + (error || response.statusCode)); callback(null); return; }
-            let res: any;
-            try { res = JSON.parse(body); } catch (e) { console.log("[Error][Login] qrcode/poll returned non-JSON"); callback(-1); return; }
-            const data = res && res["data"];
-            if (!data) { console.log("[Error][Login] Unexpected qrcode/poll response: code " + (res && res["code"]) + " " + (res && res["message"])); callback(-1); return; }
-            if (data["code"] === 0) { callback(extractLoginCookies(data["url"], response.headers["set-cookie"])); return; }
-            if (POLL_STATUS[data["code"]] === undefined) console.log("[Error][Login] Unknown qrcode/poll code " + data["code"] + " " + data["message"]);
-            callback(POLL_STATUS[data["code"]] !== undefined ? POLL_STATUS[data["code"]] : -1);
-        });
+/** -4 未扫码, -5 已扫码未确认, -2 已失效, -1 其它, or the login cookies on success. */
+async function pollLogin(key: string): Promise<number | LoginCookies> {
+    const { json, setCookie } = await bilibili.call("https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=" + encodeURIComponent(key));
+    const data = json && json.data;
+    if (!data) { console.log("[Error][Login] Unexpected qrcode/poll response: code " + (json && json.code) + " " + (json && json.message)); return -1; }
+    if (data.code === 0) return extractLoginCookies(data.url, setCookie);
+    if (POLL_STATUS[data.code] === undefined) console.log("[Error][Login] Unknown qrcode/poll code " + data.code + " " + data.message);
+    return POLL_STATUS[data.code] !== undefined ? POLL_STATUS[data.code] : -1;
 }
 
 /**
- * Check the cookies against Bilibili (by reading the user's filter list) and, if they work, sign the visitor in:
- * set our session cookies on the response and store the token. done(true, uid) or done(false, reason).
+ * Check the cookies against Bilibili (by reading the user's filter list) and, if they work, sign the visitor in.
+ * Returns the uid, or throws an HttpError the page can show.
  */
-function completeLogin(parts: LoginCookies, request: express.Request, response: express.Response, done: (ok: boolean, info: any) => void) {
+async function completeLogin(parts: LoginCookies, req: express.Request, res: express.Response): Promise<string> {
     const uid = parts["DedeUserID"];
+    if (!/^\d{1,20}$/.test(uid || "")) throw new http.HttpError(400, "DedeUserID 格式不对");
+    for (const name of LOGIN_COOKIES) if (!parts[name] || parts[name].length > 1024 || /[;\r\n]/.test(parts[name])) throw new http.HttpError(400, name + " 格式不对");
     const cookie = LOGIN_COOKIES.map(name => name + "=" + parts[name]).join("; ");
-    bilibili.fetchBlacklist(cookie, function (suc, result) {
-        if (!suc) {
-            console.log("[Error][Login] Bilibili rejected the new session: " + JSON.stringify(result && result.code !== undefined ? { code: result.code, message: result.message } : String(result)).slice(0, 200));
-            done(false, result);
-            return;
-        }
-        const token = generateToken();
-        setSessionCookies(request, response, { uid: uid, token: token, bilibili_cookies: cookie, csrf: parts["bili_jct"] });
-        storeToken(uid, token);
-        done(true, uid);
-    });
+    try {
+        await bilibili.getFilters(cookie);
+    } catch (e) {
+        console.log("[Error][Login] Bilibili rejected the new session: " + (e instanceof bilibili.BiliError ? e.code + " " + e.message : "network error"));
+        throw new http.HttpError(502, "B 站拒绝了这次登录", -6);
+    }
+    const token = generateToken();
+    setSessionCookies(req, res, { uid: uid, token: token, bilibili_cookies: cookie, csrf: parts["bili_jct"] });
+    database.updateOne("users", { uid: parseInt(uid) }, { $set: { token: token } }, { upsert: true });
+    return uid;
 }
 
 export function registerApis(app: express.Application) {
     // manual login with cookies copied from the browser
-    app.post('/login/cookies', function (request, response) {
+    app.post('/login/cookies', http.rateLimit('login', 20), http.route(async (req, res) => {
         const parts: LoginCookies = {};
-        for (const name of LOGIN_COOKIES) parts[name] = request.body[name];
-        completeLogin(parts, request, response, function (ok, info) {
-            if (ok) response.redirect("../index.html");
-            else response.json(info);
-        });
-    });
+        for (const name of LOGIN_COOKIES) parts[name] = http.str(req.body[name], { name: name, max: 1024 });
+        await completeLogin(parts, req, res);
+        res.json({ code: 0 });
+    }));
+
     // the page can't delete HttpOnly cookies itself
-    app.post('/logout', function (req, response) {
-        clearSessionCookies(req, response);
-        response.json({ "code": 0 });
-    });
-    app.get('/login/getoauth', function (req, response) {
-        getOAuthKey(function (res) {
-            if (res === null) response.status(502).json({ "code": -1, "message": "Bilibili did not respond" });
-            else response.json(res);
-        });
-    });
+    app.post('/logout', http.route((req, res) => {
+        clearSessionCookies(req, res);
+        res.json({ code: 0 });
+    }));
+
+    app.get('/login/getoauth', http.rateLimit('login', 20), http.route(async (req, res) => {
+        let data: any;
+        try { data = (await bilibili.call("https://passport.bilibili.com/x/passport-login/web/qrcode/generate")).json.data; } catch (e) { data = null; }
+        if (!data || !data.qrcode_key) throw new http.HttpError(502, "B 站没有返回二维码");
+        res.json({ url: data.url, oauthKey: data.qrcode_key });
+    }));
+
     // poll the QR code; on success the login is completed right here, so the session cookies never pass through the page
-    app.post('/login/getinfo', function (req, response) {
-        pollLogin(req.body["oauthkey"], function (res) {
-            if (res === null) { response.status(502).json({ "code": -1, "message": "Bilibili did not respond" }); return; }
-            if (typeof res === "number") { response.json(res); return; }
-            const missing = LOGIN_COOKIES.filter(name => !res[name]);
-            if (missing.length) {
-                console.log("[Error][Login] QR login confirmed but cookies are missing: " + missing.join(", ") + " (got: " + (Object.keys(res).join(", ") || "none") + ")");
-                response.json({ "code": -3, "message": "missing cookies" });
-                return;
-            }
-            completeLogin(res, req, response, function (ok, uid) {
-                if (ok) response.json({ "code": 0, "uid": uid });
-                else response.json({ "code": -6, "message": "Bilibili rejected the login" });
-            });
-        });
-    });
+    app.post('/login/getinfo', http.rateLimit('login-poll', 60), http.route(async (req, res) => {
+        const key = http.str(req.body.oauthkey, { name: "二维码", max: 64 });
+        let result: number | LoginCookies;
+        try { result = await pollLogin(key); } catch (e) { throw new http.HttpError(502, "B 站没有响应"); }
+        if (typeof result === "number") { res.json(result); return; }
+        const missing = LOGIN_COOKIES.filter(name => !(result as LoginCookies)[name]);
+        if (missing.length) {
+            console.log("[Error][Login] QR login confirmed but cookies are missing: " + missing.join(", ") + " (got: " + (Object.keys(result).join(", ") || "none") + ")");
+            res.json({ code: -3, message: "missing cookies" });
+            return;
+        }
+        try { res.json({ code: 0, uid: await completeLogin(result, req, res) }); }
+        catch (e) { if (e instanceof http.HttpError) res.json({ code: e.code, message: e.message }); else throw e; }
+    }));
 }
 
 export let _generateToken = generateToken;

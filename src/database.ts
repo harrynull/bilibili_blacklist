@@ -7,12 +7,12 @@ import crypto = require('crypto');
  * Every collection is a table `(id TEXT PRIMARY KEY, doc TEXT)` where `doc` is the document serialized as
  * JSON (including `_id`), so API responses are byte-identical to what MongoDB returned. Only the query and
  * update operators this app uses are supported; anything else throws instead of silently doing the wrong thing.
+ * Every function is synchronous (node:sqlite is) and throws on error, so a route either answers or fails with a 500;
+ * nothing is left hanging. Values in filters must be plain strings/numbers/booleans: routes validate their input first,
+ * and anything object-shaped that slips through (e.g. `?id[$ne]=x`) is rejected here as well.
  *
  * The database file defaults to ./bilibili_blacklist.db and can be changed with the SQLITE_PATH env variable.
  */
-
-type DatabaseCallback = ((database: Database) => void);
-type OperationCallback<T> = ((result: T) => void) | null;
 
 export interface InsertResult { insertedId: string; }
 export interface UpdateResult { matchedCount: number; modifiedCount: number; upsertedId: string | null; }
@@ -23,7 +23,7 @@ const TABLES = ['users', 'sharelist', 'user_sharelist', 'tags'];
 
 var conn: sqlite.DatabaseSync | undefined;
 
-function open(): sqlite.DatabaseSync {
+export function open(): sqlite.DatabaseSync {
     if (conn) return conn;
     const db = new sqlite.DatabaseSync(process.env.SQLITE_PATH || 'bilibili_blacklist.db');
     db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000;');
@@ -37,6 +37,13 @@ function open(): sqlite.DatabaseSync {
     return db;
 }
 
+/** Switch to another database file (tests). */
+export function useDatabase(path: string) {
+    if (conn) conn.close();
+    conn = undefined;
+    process.env.SQLITE_PATH = path;
+}
+
 function checkTable(tableName: string) {
     if (TABLES.indexOf(tableName) < 0) throw new Error('unknown table ' + tableName);
 }
@@ -48,7 +55,11 @@ function fieldPath(field: string) {
 
 /** undefined cannot be bound; MongoDB treated it like null (which never matches the fields we query). */
 function bindable(value: any) {
-    return value === undefined ? null : value;
+    if (value === undefined || value === null) return null;
+    if (typeof value === 'boolean') return value ? 1 : 0;
+    if (typeof value === 'number') return isFinite(value) ? value : null;    // NaN (a missing uid cookie) matches nothing
+    if (typeof value === 'string') return value;
+    throw new Error('unsupported filter value of type ' + typeof value);
 }
 
 const PROCESS_UNIQUE = crypto.randomBytes(5).toString('hex');
@@ -93,7 +104,8 @@ function compileFilter(where: any): { sql: string, params: any[] } {
             throw new Error('unsupported array equality filter on ' + key);
         } else if (key == '_id') {
             clauses.push('id = ?');
-            params.push(value === undefined || value === null ? null : String(value));
+            const v = bindable(value);
+            params.push(v === null ? null : String(v));
         } else {
             clauses.push('json_extract(doc, ?) = ?');
             params.push(fieldPath(key), bindable(value));
@@ -138,175 +150,98 @@ function applyUpdate(doc: any, update: any) {
     return doc;
 }
 
-export class Database {
+/** Insert a document into a table. An ObjectId-style `_id` is generated if the document has none. */
+export function insertOne(tableName: string, data: any): InsertResult {
+    checkTable(tableName);
+    const id = data._id !== undefined ? String(data._id) : newId();
+    const doc = Object.assign({ _id: id }, data, { _id: id });
+    open().prepare(`INSERT INTO ${tableName} (id, doc) VALUES (?, ?)`).run(id, JSON.stringify(doc));
+    return { insertedId: id };
+}
 
-    /**
-     * Creates an instance of Database (the SQLite file is opened once per process).
-     * @param {DatabaseCallback} afterDoneSuccessfully It will be executed once the database is ready.
-     * @memberof Database
-     */
-    public constructor(afterDoneSuccessfully: DatabaseCallback) {
-        try {
-            open();
-        } catch (error) {
-            console.log('[Error][DB] Open: ' + error);
-            return;
-        }
-        afterDoneSuccessfully(this);
+/** All documents in a table matching the filter, in insertion order. */
+export function find(tableName: string, where: object): any[] {
+    checkTable(tableName);
+    const filter = compileFilter(where);
+    const rows = open().prepare(`SELECT doc FROM ${tableName} ${filter.sql} ORDER BY rowid`).all(...filter.params);
+    return rows.map((row: any) => JSON.parse(row.doc));
+}
+
+/** The first matching document, or null. */
+export function findOne(tableName: string, where: object): any | null {
+    checkTable(tableName);
+    const filter = compileFilter(where);
+    const row = open().prepare(`SELECT doc FROM ${tableName} ${filter.sql} ORDER BY rowid LIMIT 1`).get(...filter.params) as any;
+    return row ? JSON.parse(row.doc) : null;
+}
+
+/**
+ * One page of matching documents plus the total count.
+ * Sorting by `sort` (a top-level field) in direction `dir` ("asc"/"desc"/1/-1); ties are broken by _id,
+ * i.e. creation order. Without a sort the natural (insertion) order is used.
+ */
+export function findPage(tableName: string, where: object, sort: string | undefined, dir: string | number | undefined,
+                         skip: number, limit: number): PageResult {
+    checkTable(tableName);
+    const db = open();
+    const filter = compileFilter(where);
+    const total = (db.prepare(`SELECT COUNT(*) AS n FROM ${tableName} ${filter.sql}`).get(...filter.params) as any).n;
+    let order = 'ORDER BY rowid';
+    const params = filter.params.slice();
+    if (sort && dir !== undefined && /^[A-Za-z0-9_\-]+$/.test(sort)) {
+        const descending = ['desc', 'descending', '-1'].indexOf(String(dir).toLowerCase()) >= 0;
+        order = `ORDER BY json_extract(doc, ?) ${descending ? 'DESC' : 'ASC'}, id ASC`;
+        params.push(fieldPath(sort));
     }
+    params.push(limit, skip);
+    const rows = db.prepare(`SELECT doc FROM ${tableName} ${filter.sql} ${order} LIMIT ? OFFSET ?`).all(...params);
+    return { total: Number(total), data: rows.map((row: any) => JSON.parse(row.doc)) };
+}
 
-    /**
-     * Insert a document into a table. An ObjectId-style `_id` is generated if the document has none.
-     */
-    public insertOne(tableName: string, data: any, afterDoneSuccessfully: OperationCallback<InsertResult>) {
-        let result: InsertResult;
-        try {
-            checkTable(tableName);
-            const id = data._id !== undefined ? String(data._id) : newId();
-            const doc = Object.assign({ _id: id }, data, { _id: id });
-            open().prepare(`INSERT INTO ${tableName} (id, doc) VALUES (?, ?)`).run(id, JSON.stringify(doc));
-            result = { insertedId: id };
-        } catch (error) {
-            console.log('[Error][DB] Insert: ' + error);
-            return;
-        }
-        if (afterDoneSuccessfully) afterDoneSuccessfully(result);
-    }
-
-    /**
-     * Find all documents in a table matching the filter, in insertion order.
-     */
-    public find(tableName: string, where: object, afterDoneSuccessfully: OperationCallback<any[]>) {
-        let result: any[];
-        try {
-            checkTable(tableName);
-            const filter = compileFilter(where);
-            const rows = open().prepare(`SELECT doc FROM ${tableName} ${filter.sql} ORDER BY rowid`).all(...filter.params);
-            result = rows.map((row: any) => JSON.parse(row.doc));
-        } catch (error) {
-            console.log('[Error][DB] Find: ' + error);
-            return;
-        }
-        if (afterDoneSuccessfully) afterDoneSuccessfully(result);
-    }
-
-    /**
-     * Find one page of matching documents plus the total count.
-     * Sorting by `sort` (a top-level field) in direction `dir` ("asc"/"desc"/1/-1); ties are broken by _id,
-     * i.e. creation order. Without a sort the natural (insertion) order is used.
-     */
-    public findPage(tableName: string, where: object, sort: string | undefined, dir: string | number | undefined,
-                    skip: number, limit: number, afterDoneSuccessfully: OperationCallback<PageResult>) {
-        let result: PageResult;
-        try {
-            checkTable(tableName);
-            const db = open();
-            const filter = compileFilter(where);
-            const total = (db.prepare(`SELECT COUNT(*) AS n FROM ${tableName} ${filter.sql}`).get(...filter.params) as any).n;
-            let order = 'ORDER BY rowid';
-            const params = filter.params.slice();
-            if (sort && dir !== undefined && /^[A-Za-z0-9_\-]+$/.test(sort)) {
-                const descending = ['desc', 'descending', '-1'].indexOf(String(dir).toLowerCase()) >= 0;
-                order = `ORDER BY json_extract(doc, ?) ${descending ? 'DESC' : 'ASC'}, id ASC`;
-                params.push(fieldPath(sort));
-            }
-            params.push(limit, skip);
-            const rows = db.prepare(`SELECT doc FROM ${tableName} ${filter.sql} ${order} LIMIT ? OFFSET ?`).all(...params);
-            result = { total: total, data: rows.map((row: any) => JSON.parse(row.doc)) };
-        } catch (error) {
-            console.log('[Error][DB] FindPage: ' + error);
-            return;
-        }
-        if (afterDoneSuccessfully) afterDoneSuccessfully(result);
-    }
-
-    /**
-     * Update the first document matching the filter. With `{ upsert: true }` a new document is created
-     * from the filter's equality fields plus the update when nothing matches.
-     */
-    public updateOne(tableName: string, where: any, update: object, options: { upsert?: boolean },
-                     afterDoneSuccessfully: OperationCallback<UpdateResult>) {
+/**
+ * Update the first document matching the filter. With `{ upsert: true }` a new document is created
+ * from the filter's equality fields plus the update when nothing matches.
+ */
+export function updateOne(tableName: string, where: any, update: object, options?: { upsert?: boolean }): UpdateResult {
+    checkTable(tableName);
+    const db = open();
+    const filter = compileFilter(where);
+    db.exec('BEGIN IMMEDIATE');
+    try {
         let result: UpdateResult;
-        const db = open();
-        try {
-            checkTable(tableName);
-            const filter = compileFilter(where);
-            db.exec('BEGIN IMMEDIATE');
-            try {
-                const row = db.prepare(`SELECT id, doc FROM ${tableName} ${filter.sql} ORDER BY rowid LIMIT 1`).get(...filter.params) as any;
-                if (row) {
-                    const before = row.doc;
-                    const after = JSON.stringify(applyUpdate(JSON.parse(row.doc), update));
-                    if (after !== before) db.prepare(`UPDATE ${tableName} SET doc = ? WHERE id = ?`).run(after, row.id);
-                    result = { matchedCount: 1, modifiedCount: after !== before ? 1 : 0, upsertedId: null };
-                } else if (options && options.upsert) {
-                    const id = where._id !== undefined && where._id !== null && typeof where._id !== 'object' ? String(where._id) : newId();
-                    const doc: any = { _id: id };
-                    for (const key of Object.keys(where)) {
-                        const value = where[key];
-                        if (key != '_id' && !(value !== null && typeof value === 'object')) doc[key] = value;
-                    }
-                    applyUpdate(doc, update);
-                    db.prepare(`INSERT INTO ${tableName} (id, doc) VALUES (?, ?)`).run(id, JSON.stringify(doc));
-                    result = { matchedCount: 0, modifiedCount: 0, upsertedId: id };
-                } else {
-                    result = { matchedCount: 0, modifiedCount: 0, upsertedId: null };
-                }
-                db.exec('COMMIT');
-            } catch (error) {
-                db.exec('ROLLBACK');
-                throw error;
+        const row = db.prepare(`SELECT id, doc FROM ${tableName} ${filter.sql} ORDER BY rowid LIMIT 1`).get(...filter.params) as any;
+        if (row) {
+            const before = row.doc;
+            const after = JSON.stringify(applyUpdate(JSON.parse(row.doc), update));
+            if (after !== before) db.prepare(`UPDATE ${tableName} SET doc = ? WHERE id = ?`).run(after, row.id);
+            result = { matchedCount: 1, modifiedCount: after !== before ? 1 : 0, upsertedId: null };
+        } else if (options && options.upsert) {
+            const id = where._id !== undefined && where._id !== null && typeof where._id !== 'object' ? String(where._id) : newId();
+            const doc: any = { _id: id };
+            for (const key of Object.keys(where)) {
+                const value = where[key];
+                if (key != '_id' && !(value !== null && typeof value === 'object')) doc[key] = value;
             }
-        } catch (error) {
-            console.log('[Error][DB] Update: ' + error);
-            return;
+            applyUpdate(doc, update);
+            db.prepare(`INSERT INTO ${tableName} (id, doc) VALUES (?, ?)`).run(id, JSON.stringify(doc));
+            result = { matchedCount: 0, modifiedCount: 0, upsertedId: id };
+        } else {
+            result = { matchedCount: 0, modifiedCount: 0, upsertedId: null };
         }
-        if (afterDoneSuccessfully) afterDoneSuccessfully(result);
+        db.exec('COMMIT');
+        return result;
+    } catch (error) {
+        db.exec('ROLLBACK');
+        throw error;
     }
+}
 
-    /**
-     * Delete the first document matching the filter.
-     */
-    public deleteOne(tableName: string, where: object, afterDoneSuccessfully: OperationCallback<DeleteResult>) {
-        let result: DeleteResult;
-        try {
-            checkTable(tableName);
-            const db = open();
-            const filter = compileFilter(where);
-            const row = db.prepare(`SELECT id FROM ${tableName} ${filter.sql} ORDER BY rowid LIMIT 1`).get(...filter.params) as any;
-            if (row) db.prepare(`DELETE FROM ${tableName} WHERE id = ?`).run(row.id);
-            result = { deletedCount: row ? 1 : 0 };
-        } catch (error) {
-            console.log('[Error][DB] Delete: ' + error);
-            return;
-        }
-        if (afterDoneSuccessfully) afterDoneSuccessfully(result);
-    }
-
-    /**
-     * 验证用户在平台的登录状态
-     *
-     * @param {string} uid user's uid
-     * @param {string} token user's token
-     * @param {((isLogin: boolean) => void)} callback the callback
-     * @memberof Database
-     */
-    public verifyUser(uid: string, token: string, callback: ((isLogin: boolean) => void)) {
-        this.find("users", { "uid": uid, "token": token }, function (res) {
-            callback(res.length != 0);
-        });
-    }
-
-    /**
-     * Kept for API compatibility; the connection stays open for the life of the process.
-     */
-    public close() {
-    }
-
-    /**
-     * Ids are stored as strings (the hex form of the old MongoDB ObjectIds).
-     */
-    public static getID(id: string) {
-        return String(id);
-    }
+/** Delete the first document matching the filter. */
+export function deleteOne(tableName: string, where: object): DeleteResult {
+    checkTable(tableName);
+    const db = open();
+    const filter = compileFilter(where);
+    const row = db.prepare(`SELECT id FROM ${tableName} ${filter.sql} ORDER BY rowid LIMIT 1`).get(...filter.params) as any;
+    if (row) db.prepare(`DELETE FROM ${tableName} WHERE id = ?`).run(row.id);
+    return { deletedCount: row ? 1 : 0 };
 }

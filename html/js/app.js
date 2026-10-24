@@ -72,8 +72,16 @@ function preview(item, budget) {
 
 /* ------------------------------------------------------------------ api */
 
-async function check(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r; }
-// some endpoints (the ones that call Bilibili) never answer when Bilibili fails, so every request gets a timeout
+// failed requests carry the server's message (Chinese, written for the visitor) when it sent one
+async function check(r) {
+    if (r.ok) return r;
+    let message = '';
+    try { const body = await r.clone().json(); message = body && typeof body.message === 'string' ? body.message : ''; } catch (e) { /* not JSON */ }
+    const err = new Error('HTTP ' + r.status);
+    err.status = r.status; err.serverMessage = message;
+    throw err;
+}
+// every request gets a timeout, so a stuck network call can't leave a button spinning forever
 function request(url, init, timeoutMs) {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), timeoutMs || 20000);
@@ -167,7 +175,22 @@ function toast(text, opts) {
     toasts.push(t);
     if (t.kind !== 'err' && !t.action) setTimeout(() => dismissToast(t), t.sub ? 6000 : 3500);
 }
-const fail = (what, e) => toast(what + '失败', { kind: 'err', sub: e && e.message === 'HTTP 404' ? '找不到这个屏蔽词包' : '请检查网络后重试' });
+const fail = (what, e) => toast(what + '失败', { kind: 'err', sub: (e && e.serverMessage) || (e && e.status === 404 ? '找不到这个屏蔽词包' : '请检查网络后重试') });
+
+/* bulk jobs on the server (applying a pack, blocking users) run paced; poll until done, reporting progress */
+async function followJob(id, onProgress) {
+    for (;;) {
+        await new Promise(r => setTimeout(r, 1500));
+        let st;
+        try { st = await api.get('job', { id }); } catch (e) { if (e.status === 404) throw e; continue; }
+        if (onProgress) onProgress(st);
+        if (st.finished) return st;
+    }
+}
+function jobSummary(st, noun) {
+    if (!st.failed) return null;
+    return '有 ' + st.failed + ' ' + noun + '没能加上' + (st.error ? '（B 站返回：' + st.error + '）' : '') + '，可以稍后再试一次';
+}
 
 const dialog = reactive({ name: null, resolve: null, data: null });
 function openDialog(name, data) {
@@ -182,17 +205,34 @@ function onceFlag(key, legacyCookie) {
     saveJSON('localStorage', key, true);
     return true;
 }
+const applying = reactive({});      // pack id -> { done, total } while its job runs
 async function applyPack(item) {
     if (!session.loggedIn) { if (await openDialog('login-required')) go('/login'); return; }
-    if (applied[item._id]) return;
+    if (applied[item._id] || applying[item._id]) return;
     try {
-        await api.postJSON('apply', { id: item._id });
+        applying[item._id] = { done: 0, total: 0 };
+        const res = await api.postJSON('apply', { id: item._id });
+        let st = { added: 0, failed: 0 };
+        if (res.job) {
+            applying[item._id] = { done: 0, total: res.total };
+            st = await followJob(res.job, p => { applying[item._id] = { done: p.done, total: p.total }; });
+        }
+        delete applying[item._id];
+        if (res.job && !st.added) { toast('没能应用', { kind: 'err', sub: jobSummary(st, '条屏蔽词') }); return; }
         applied[item._id] = true;
         saveJSON('sessionStorage', 'apply_status', applied);
         item.usage = (item.usage || 0) + 1;
-        if (onceFlag('bbl.syncGuide', 'tip')) openDialog('sync-guide');
+        const partial = jobSummary(st, '条屏蔽词');
+        if (partial) toast('已应用 ' + st.added + ' 条屏蔽词', { kind: 'err', sub: partial });
+        else if (onceFlag('bbl.syncGuide', 'tip')) openDialog('sync-guide');
         else toast('已应用到账号', { sub: '在 B 站播放器的屏蔽设定里点“同步屏蔽列表”后生效' });
-    } catch (e) { fail('应用', e); }
+    } catch (e) { delete applying[item._id]; fail('应用', e); }
+}
+function applyLabel(item, long) {
+    const a = applying[item._id];
+    if (a) return a.total ? '应用中 ' + a.done + '/' + a.total : '应用中…';
+    if (applied[item._id]) return long ? '已应用到账号' : '已应用';
+    return long ? '应用到账号' : '应用';
 }
 async function exportPack(item) {
     try {
@@ -435,7 +475,7 @@ app.component('home-view', {
             return out;
         });
         return { state, sort, page, tags, quickTags, allTags, listTop, setQuery, toggleTag, setTags, gotoPage, pages,
-            applied, applyPack, exportPack, fmt, ratingText, safetyOf, cleanTags, preview, session, detailHref, votes };
+            applied, applying, applyLabel, applyPack, exportPack, fmt, ratingText, safetyOf, cleanTags, preview, session, detailHref, votes };
     },
     template: `
 <div class="top-band"><div class="shell">
@@ -498,7 +538,7 @@ app.component('home-view', {
           <div class="pack-num"><b>{{ votes(item).total ? Math.round(votes(item).up / votes(item).total * 100) + '%' : '—' }}</b>{{ votes(item).total ? votes(item).total + ' 人' : '暂无' }}</div>
           <div class="pack-meta"><span><b>{{ fmt(item.usage) }}</b> 次使用</span><span>{{ ratingText(item) }}</span></div>
           <div class="pack-actions">
-            <button class="btn" :class="applied[item._id] ? 'done' : 'primary'" :disabled="applied[item._id]" @click="applyPack(item)" :aria-label="(applied[item._id] ? '已应用 ' : '应用 ') + item.name">{{ applied[item._id] ? '已应用' : '应用' }}</button>
+            <button class="btn" :class="applied[item._id] ? 'done' : 'primary'" :disabled="applied[item._id] || !!applying[item._id]" @click="applyPack(item)" :aria-label="applyLabel(item) + ' ' + item.name">{{ applyLabel(item) }}</button>
             <button class="btn" @click="exportPack(item)" :aria-label="'导出 ' + item.name">导出</button>
           </div>
         </li>
@@ -600,7 +640,7 @@ app.component('detail-panel', {
             } catch (e) { fail('发表评价', e); }
             finally { posting.value = false; }
         }
-        return { item, error, close, panel, comments, vote, text, post, posting, needVote, applied, applyPack, exportPack,
+        return { item, error, close, panel, comments, vote, text, post, posting, needVote, applied, applying, applyLabel, applyPack, exportPack,
             fmt, fmtDate, votes, ratingText, safetyOf, cleanTags, TYPE_LABEL, icons, dialog };
     },
     template: `
@@ -661,7 +701,7 @@ app.component('detail-panel', {
     </div>
   </div>
   <div class="drawer-foot" v-if="item">
-    <button class="btn large" :class="applied[item._id] ? 'done' : 'primary'" :disabled="applied[item._id]" @click="applyPack(item)">{{ applied[item._id] ? '已应用到账号' : '应用到账号' }}</button>
+    <button class="btn large" :class="applied[item._id] ? 'done' : 'primary'" :disabled="applied[item._id] || !!applying[item._id]" @click="applyPack(item)">{{ applyLabel(item, true) }}</button>
     <button class="btn large" @click="exportPack(item)">导出 XML</button>
   </div>
 </div>`,
@@ -798,14 +838,16 @@ app.component('users-view', {
             if (!await openDialog('confirm-block-all', { count: pending.value.length, min: min.value })) return;
             const list = pending.value.slice();
             Object.assign(run, { active: true, done: 0, total: list.length });
-            let failed = 0;
-            for (const h of list) {
-                try { await api.postForm('add_item', { type: 2, filter: h }); done[h] = true; } catch (e) { failed++; }
-                run.done++;
-            }
+            let st;
+            try {
+                const res = await api.postJSON('block_users', { hashes: list });
+                st = await followJob(res.job, p => { run.done = p.done; run.total = p.total; });
+            } catch (e) { run.active = false; fail('屏蔽', e); return; }
+            const notAdded = new Set(st.failedItems || []);
+            for (const h of list) if (!notAdded.has(h)) done[h] = true;
             saveJSON('sessionStorage', 'apply_status', done);
             run.active = false;
-            if (failed) toast('有 ' + failed + ' 个用户没能屏蔽', { kind: 'err', sub: '可以稍后再点一次，已屏蔽的会自动跳过' });
+            if (st.failed) toast('有 ' + st.failed + ' 个用户没能屏蔽', { kind: 'err', sub: (st.error ? 'B 站返回：' + st.error + '。' : '') + '可以稍后再点一次，已屏蔽的会自动跳过' });
             else if (onceFlag('bbl.syncGuide', 'tip')) openDialog('sync-guide');
             else toast('已屏蔽 ' + list.length + ' 个用户', { sub: '在 B 站播放器的屏蔽设定里点“同步屏蔽列表”后生效' });
         }

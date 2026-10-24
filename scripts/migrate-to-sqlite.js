@@ -36,8 +36,7 @@ function parseArgs(argv) {
 
 function openTarget(dbPath) {
     process.env.SQLITE_PATH = dbPath;
-    const { Database } = require(path.join(__dirname, '..', 'build', 'src', 'database.js'));
-    new Database(function () { });          // creates the tables and indexes
+    require(path.join(__dirname, '..', 'build', 'src', 'database.js')).open();   // creates the tables and indexes
     const { DatabaseSync } = require('node:sqlite');
     return new DatabaseSync(dbPath);
 }
