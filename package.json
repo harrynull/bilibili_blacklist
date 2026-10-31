@@ -4,7 +4,7 @@
   "description": "A website that allows users to share and manage their bilibili danmaku blacklist.",
   "main": "build/app.js",
   "dependencies": {
-    "body-parser": "^1.19.0",
+    "body-parser": "^1.20.3",
     "cookie-parser": "^1.4.4",
     "ejs": "^3.0.1",
     "express": "^4.17.1",
